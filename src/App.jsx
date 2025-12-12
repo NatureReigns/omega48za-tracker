@@ -7,50 +7,51 @@ function App() {
   const [sales, setSales] = useState([]);
   const [amount, setAmount] = useState('');
   const [bottles, setBottles] = useState('');
-  const [phoneInput, setPhone] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
 
-  // Check if already logged in
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
   const signInWithPhone = async () => {
-    if (phone.length < 10) return alert('Enter full SA number');
-    const fullPhone = '+27' + phone.slice(1);
+    if (phoneInput.length < 10) return alert('Enter full SA number');
+    const fullPhone = '+27' + phoneInput.slice(1);
     const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     if (error) alert(error.message);
     else alert('OTP sent – use 000000 for testing');
   };
 
   const addSale = () => {
-    if (!amount || !bottles) return;
+    if (!amount || !bottles) return alert('Enter amount and bottles');
     const newSale = {
       id: Date.now(),
-      amount: Number(amount),
-      bottles: Number(bottles),
+      amount_zar: Number(amount),
+      bottles_sold: Number(bottles),
     };
     setSales([...sales, newSale]);
     setAmount('');
     setBottles('');
   };
 
-  const total = sales.reduce((sum, s) => sum + s.amount, 0);
-  const commission = total * 0.3;
-  const stock = total * 0.5;
+  const totalSales = sales.reduce((sum, s) => sum + (s.amount_zar || 0), 0);
+  const commission = totalSales * 0.3;
+  const stockAlloc = totalSales * 0.5;
 
-  if (loading) return <div>Loading…</div>;
+  if (loading) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
+  }
 
-  // ================= LOGIN SCREEN =================
-  if (!user === null) {
+  // Login Screen
+  if (user === null) {
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
         <h1 style={{ color: '#1B4D3E' }}>Nature Reigns Omega48</h1>
@@ -59,8 +60,8 @@ function App() {
           type="text"
           inputMode="numeric"
           placeholder="082 123 4567"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+          value={phoneInput}
+          onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ''))}
           style={{
             padding: '14px',
             fontSize: '18px',
@@ -103,7 +104,7 @@ function App() {
     );
   }
 
-  // ================= MAIN DASHBOARD =================
+  // Main Dashboard
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ color: '#1B4D3E' }}>Welcome {user.phone}</h1>
@@ -117,9 +118,9 @@ function App() {
         </button>
 
         <div style={{ marginTop: '20px' }}>
-          <p><strong>Total Sales:</strong> R{total.toFixed(2)}</p>
+          <p><strong>Total Sales:</strong> R{totalSales.toFixed(2)}</p>
           <p><strong>Commission (30%):</strong> R{commission.toFixed(2)}</p>
-          <p><strong>Stock Allocation (50%):</strong> R{stock.toFixed(2)}</p>
+          <p><strong>Stock Allocation (50%):</strong> R{stockAlloc.toFixed(2)}</p>
         </div>
       </div>
 
@@ -127,7 +128,7 @@ function App() {
         <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
           <h3>Admin Quick Actions</h3>
           <button style={{ padding: '10px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px' }}>
-            Edit Commission Rules (coming in 2 minutes if you want it now)
+            Edit Commission Rules
           </button>
         </div>
       )}
