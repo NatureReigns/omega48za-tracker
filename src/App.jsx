@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { supabase } from './main.jsx';
 
 function App() {
@@ -7,71 +6,96 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState([]);
   const [amount, setAmount] = useState('');
-  const [bottles, setBottles] = useState(0);
-  const [phoneInput, setPhoneInput] = useState('');
+  const [bottles, setBottles] = useState('');
+  const [phoneInput, setPhone] = useState('');
 
+  // Check if already logged in
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => listener.subscription.unsubscribe();
   }, []);
 
+  const signInWithPhone = async () => {
+    if (phone.length < 10) return alert('Enter full SA number');
+    const fullPhone = '+27' + phone.slice(1);
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+    if (error) alert(error.message);
+    else alert('OTP sent – use 000000 for testing');
+  };
+
   const addSale = () => {
-    if (!amount || bottles <= 0) return alert('Enter amount and bottles');
+    if (!amount || !bottles) return;
     const newSale = {
       id: Date.now(),
-      amount_zar: parseFloat(amount),
-      bottles_sold: parseInt(bottles),
+      amount: Number(amount),
+      bottles: Number(bottles),
     };
     setSales([...sales, newSale]);
     setAmount('');
-    setBottles(0);
+    setBottles('');
   };
 
-  const total = sales.reduce((sum, s) => sum + s.amount_zar, 0);
+  const total = sales.reduce((sum, s) => sum + s.amount, 0);
   const commission = total * 0.3;
   const stock = total * 0.5;
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div>Loading…</div>;
 
-  if (!user) {
+  // ================= LOGIN SCREEN =================
+  if (!user === null) {
     return (
-      <div style={{ padding: '30px', textAlign: 'center', fontFamily: 'Arial' }}>
-        <h1>Nature Reigns Omega48</h1>
+      <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
+        <h1 style={{ color: '#1B4D3E' }}>Nature Reigns Omega48</h1>
+        <p style={{ color: '#555' }}>Enter your SA number</p>
         <input
           type="text"
           inputMode="numeric"
           placeholder="082 123 4567"
-          value={phoneInput}
-          onChange={(e) => {
-            const nums = e.target.value.replace(/\D/g, '');
-            setPhoneInput(nums);
+          value={phone}
+          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+          style={{
+            padding: '14px',
+            fontSize: '18px',
+            width: '240px',
+            borderRadius: '8px',
+            border: '2px solid #D4AF37',
+            marginBottom: '20px',
           }}
-          style={{ padding: '12px', fontSize: '18px', width: '220px', margin: '10px' }}
         />
         <br />
         <button
-          onClick={async () => {
-            if (phoneInput.length < 10) return alert('Valid SA number required');
-            const full = '+27' + phoneInput.slice(1);
-            await supabase.auth.signInWithOtp({ phone: full });
-            alert('OTP sent – use 000000 for testing');
+          onClick={signInWithPhone}
+          style={{
+            padding: '14px 32px',
+            fontSize: '18px',
+            background: '#1B4D3E',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            marginBottom: '20px',
           }}
-          style={{ padding: '12px 24px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px' }}
         >
           Send OTP
         </button>
-        <br /><br />
+        <br />
         <button
           onClick={() => setUser({ phone: '0727088491', role: 'admin' })}
-          style={{ padding: '12px 24px', background: '#D4AF37', color: 'black', border: 'none', borderRadius: '8px' }}
+          style={{
+            padding: '12px 24px',
+            fontSize: '16px',
+            background: '#D4AF37',
+            color: 'black',
+            border: 'none',
+            borderRadius: '8px',
+          }}
         >
           Demo Login (Admin)
         </button>
@@ -79,17 +103,34 @@ function App() {
     );
   }
 
+  // ================= MAIN DASHBOARD =================
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h1>Welcome {user.phone}</h1>
-      <h2>Add Sale</h2>
-      <input placeholder="Amount (ZAR)" value={amount} onChange={e => setAmount(e.target.value)} />
-      <input type="number" placeholder="Bottles" value={bottles} onChange={e => setBottles(e.target.value)} />
-      <button onClick={addSale}>Add Sale</button>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1 style={{ color: '#1B4D3E' }}>Welcome {user.phone}</h1>
 
-      <p>Total Sales: R{total.toFixed(2)}</p>
-      <p>Commission (30%): R{commission.toFixed(2)}</p>
-      <p>Stock Allocation (50%): R{stock.toFixed(2)}</p>
+      <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <h2>Add Sale</h2>
+        <input placeholder="Amount (ZAR)" value={amount} onChange={e => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
+        <input placeholder="Bottles" value={bottles} onChange={e => setBottles(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
+        <button onClick={addSale} style={{ padding: '10px 20px', background: '#D4AF37', border: 'none', borderRadius: '6px' }}>
+          Add Sale
+        </button>
+
+        <div style={{ marginTop: '20px' }}>
+          <p><strong>Total Sales:</strong> R{total.toFixed(2)}</p>
+          <p><strong>Commission (30%):</strong> R{commission.toFixed(2)}</p>
+          <p><strong>Stock Allocation (50%):</strong> R{stock.toFixed(2)}</p>
+        </div>
+      </div>
+
+      {user.role === 'admin' && (
+        <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
+          <h3>Admin Quick Actions</h3>
+          <button style={{ padding: '10px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px' }}>
+            Edit Commission Rules (coming in 2 minutes if you want it now)
+          </button>
+        </div>
+      )}
     </div>
   );
 }
