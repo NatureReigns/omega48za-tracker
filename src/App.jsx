@@ -152,3 +152,81 @@ function App() {
         <button onClick={addSale} style={{ padding: '10px 20px', background: '#D4AF37', border: 'none', borderRadius: '6px' }}>
           Add Sale
         </button>
+        <div style={{ marginTop: '20px' }}>
+          <p><strong>Total Sales:</strong> R{totalSales.toFixed(2)}</p>
+          <p><strong>Commission ({commissionRate}%):</strong> R{commission.toFixed(2)}</p>
+          <p><strong>Stock Allocation ({stockRate}%):</strong> R{stockAlloc.toFixed(2)}</p>
+          <p><strong>Bonus Pool ({bonusRate}%):</strong> R{bonusAlloc.toFixed(2)}</p>
+        </div>
+      </div>
+
+      <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
+        <ol style={{ paddingLeft: '20px' }}>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+            <strong>1. {user.phone ?? 'You'} (You)</strong> - R{totalSales.toFixed(2)}
+          </li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>2. Agent 0821234567 - R4,800.00</li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>3. Agent 0839876543 - R3,900.00</li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>4. Agent 0765554444 - R3,200.00</li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>5. Agent 0612345678 - R2,700.00</li>
+        </ol>
+        <p style={{ fontStyle: 'italic', color: '#555', marginTop: '10px' }}>Updates live with every sale!</p>
+      </div>
+
+      {user.role === 'admin' && (
+        <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
+          <h3>Admin Panel - Edit Rules</h3>
+          <label>
+            Commission %:
+            <input
+              type="number"
+              value={commissionRate}
+              onChange={(e) => setCommissionRate(Number(e.target.value) || 30)}
+              style={{ padding: '10px', margin: '10px', width: '100px' }}
+            />
+          </label>
+          <br />
+          <label>
+            Stock Allocation %:
+            <input
+              type="number"
+              value={stockRate}
+              onChange={(e) => setStockRate(Number(e.target.value) || 50)}
+              style={{ padding: '10px', margin: '10px', width: '100px' }}
+            />
+          </label>
+          <br />
+          <label>
+            Bonus Pool %:
+            <input
+              type="number"
+              value={bonusRate}
+              onChange={(e) => setBonusRate(Number(e.target.value) || 20)}
+              style={{ padding: '10px', margin: '10px', width: '100px' }}
+            />
+          </label>
+          <br />
+          <label>
+            Weekly Bonus Pool Prize (ZAR):
+            <input
+              type="number"
+              value={bonusPoolAmount}
+              onChange={(e) => setBonusPoolAmount(Number(e.target.value) || 5000)}
+              style={{ padding: '10px', margin: '10px', width: '150px' }}
+            />
+          </label>
+          <br />
+          <button
+            onClick={saveRules}
+            style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px', marginTop: '20px' }}
+          >
+            Save Rules
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
