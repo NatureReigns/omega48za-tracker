@@ -1,3 +1,13 @@
-body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
-button { padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-input { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nature Reigns Omega48</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
