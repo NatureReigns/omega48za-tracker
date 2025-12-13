@@ -55,6 +55,7 @@ function App() {
   return (
     <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ color: '#1B4D3E' }}>Nature Reigns Omega48</h1>
+      <img src="/log.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <img src="https://example.com/your-logo-url.png" alt="Nature Reigns Logo" style={{ width: '300px', marginBottom: '20px' }} /> {/* Replace with actual logo URL once uploaded */}
       <p style={{ color: '#555' }}>Enter your SA number</p>
       <input
@@ -88,7 +89,7 @@ function App() {
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ color: '#1B4D3E' }}>Welcome {user.phone}</h1>
-
+<img src="/log.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
         <input placeholder="Amount (ZAR)" value={amount} onChange={e => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
