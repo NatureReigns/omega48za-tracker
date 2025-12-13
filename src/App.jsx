@@ -80,13 +80,34 @@ const bonusAlloc = totalSales * (bonusRate / 100); // Optional display later
         }}
       />
       <br />
-      <button onClick={signInWithPhone} style={{ /* existing styles */ }}>
-        Send OTP
-      </button>
-      <br /><br />
-      <button onClick={() => setUser({ phone: '0727088491', role: 'admin' })} style={{ /* existing styles */ }}>
-        Demo Login (Admin)
-      </button>
+      <button
+  onClick={signInWithPhone}
+  style={{
+    padding: '14px 32px',
+    fontSize: '18px',
+    background: '#1B4D3E',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    marginBottom: '20px',
+  }}
+>
+  Send OTP
+</button>
+<br /><br />
+<button
+  onClick={() => setUser({ phone: '0727088491', role: 'admin' })}
+  style={{
+    padding: '12px 24px',
+    fontSize: '16px',
+    background: '#D4AF37',
+    color: 'black',
+    border: 'none',
+    borderRadius: '8px',
+  }}
+>
+  Demo Login (Admin)
+</button>
     </div>
   );
 }
