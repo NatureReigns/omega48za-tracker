@@ -223,7 +223,7 @@ function App() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || user.phone ?? 'Seller'}</h1>
+     <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
@@ -245,7 +245,7 @@ function App() {
         <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
         <ol style={{ paddingLeft: '20px' }}>
           <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
-            <strong>1. {profile?.full_name || user.phone ?? 'You'} (You)</strong> - R{totalSales.toFixed(2)}
+            <strong>1. {profile?.full_name || (user.phone ?? 'You')} (You)</strong>
           </li>
           <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>2. Agent 0821234567 - R4,800.00</li>
           <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>3. Agent 0839876543 - R3,900.00</li>
