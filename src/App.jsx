@@ -63,7 +63,6 @@ const bonusAlloc = totalSales * (bonusRate / 100); // Optional display later
     <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ color: '#1B4D3E' }}>Nature Reigns Omega48</h1>
       <img src="/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
-      <img src="https://example.com/your-logo-url.png" alt="Nature Reigns Logo" style={{ width: '300px', marginBottom: '20px' }} /> {/* Replace with actual logo URL once uploaded */}
       <p style={{ color: '#555' }}>Enter your SA number</p>
       <input
         type="text"
