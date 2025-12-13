@@ -8,6 +8,10 @@ function App() {
   const [amount, setAmount] = useState('');
   const [bottles, setBottles] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
+  const [commissionRate, setCommissionRate] = useState(30);
+const [stockRate, setStockRate] = useState(50);
+const [bonusRate, setBonusRate] = useState(20);
+const [bonusPoolAmount, setBonusPoolAmount] = useState(5000);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -41,7 +45,10 @@ function App() {
     setAmount('');
     setBottles('');
   };
-
+const saveRules = () => {
+  // In future, this will save to Supabase
+  alert(`Rules saved successfully!\nCommission: ${commissionRate}%\nStock Allocation: ${stockRate}%\nBonus Pool: ${bonusRate}%\nWeekly Prize: R${bonusPoolAmount}`);
+};
   const totalSales = sales.reduce((sum, s) => sum + (s.amount_zar || 0), 0);
   const commission = totalSales * 0.3;
   const stockAlloc = totalSales * 0.5;
