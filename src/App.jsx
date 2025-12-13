@@ -174,4 +174,31 @@ function App() {
             <input
               type="number"
               value={bonusRate}
-              onChange={(e
+              onChange={(e) => setBonusRate(Number(e.target.value) || 20)}
+              style={{ padding: '10px', margin: '10px', width: '100px' }}
+            />
+          </label>
+          <br />
+          <label>
+            Weekly Bonus Pool Prize (ZAR):
+            <input
+              type="number"
+              value={bonusPoolAmount}
+              onChange={(e) => setBonusPoolAmount(Number(e.target.value) || 5000)}
+              style={{ padding: '10px', margin: '10px', width: '150px' }}
+            />
+          </label>
+          <br />
+          <button
+            onClick={saveRules}
+            style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px', marginTop: '20px' }}
+          >
+            Save Rules
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
