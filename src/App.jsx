@@ -106,8 +106,9 @@ const bonusAlloc = totalSales * (bonusRate / 100); // Optional display later
 
         <div style={{ marginTop: '20px' }}>
           <p><strong>Total Sales:</strong> R{totalSales.toFixed(2)}</p>
-          <p><strong>Commission (30%):</strong> R{commission.toFixed(2)}</p>
-          <p><strong>Stock Allocation (50%):</strong> R{stockAlloc.toFixed(2)}</p>
+          <p><strong>Commission ({commissionRate}%):</strong> R{commission.toFixed(2)}</p>
+<p><strong>Stock Allocation ({stockRate}%):</strong> R{stockAlloc.toFixed(2)}</p>
+<p><strong>Bonus Pool ({bonusRate}%):</strong> R{bonusAlloc.toFixed(2)}</p>
         </div>
       </div>
 
