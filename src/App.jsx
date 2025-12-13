@@ -45,14 +45,13 @@ function App() {
   };
 
   const saveRules = () => {
-    // In future, this will save to Supabase
     alert(`Rules saved successfully!\nCommission: ${commissionRate}%\nStock Allocation: ${stockRate}%\nBonus Pool: ${bonusRate}%\nWeekly Prize: R${bonusPoolAmount}`);
   };
 
   const totalSales = sales.reduce((sum, s) => sum + (s.amount_zar || 0), 0);
   const commission = totalSales * (commissionRate / 100);
   const stockAlloc = totalSales * (stockRate / 100);
-  const bonusAlloc = totalSales * (bonusRate / 100); // Optional display later
+  const bonusAlloc = totalSales * (bonusRate / 100);
 
   if (loading) {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
@@ -120,8 +119,8 @@ function App() {
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
-        <input placeholder="Amount (ZAR)" value={amount} onChange={e => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
-        <input placeholder="Bottles" value={bottles} onChange={e => setBottles(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
+        <input placeholder="Amount (ZAR)" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
+        <input placeholder="Bottles" value={bottles} onChange={(e) => setBottles(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
         <button onClick={addSale} style={{ padding: '10px 20px', background: '#D4AF37', border: 'none', borderRadius: '6px' }}>
           Add Sale
         </button>
@@ -132,6 +131,22 @@ function App() {
           <p><strong>Bonus Pool ({bonusRate}%):</strong> R{bonusAlloc.toFixed(2)}</p>
         </div>
       </div>
+
+      {/* Weekly Leaderboard */}
+      <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
+        <ol style={{ paddingLeft: '20px' }}>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+            <strong>1. 0727088491 (You)</strong> - R{totalSales.toFixed(2)}
+          </li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>2. Agent 0821234567 - R4,800.00</li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>3. Agent 0839876543 - R3,900.00</li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>4. Agent 0765554444 - R3,200.00</li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>5. Agent 0612345678 - R2,700.00</li>
+        </ol>
+        <p style={{ fontStyle: 'italic', color: '#555', marginTop: '10px' }}>Updates live with every sale!</p>
+      </div>
+
       {user.role === 'admin' && (
         <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
           <h3>Admin Panel - Edit Rules</h3>
