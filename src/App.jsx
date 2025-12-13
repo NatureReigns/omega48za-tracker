@@ -105,16 +105,56 @@ function App() {
         </div>
       </div>
 
-      {user.role === 'admin' && (
-        <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
-          <h3>Admin Quick Actions</h3>
-          <button style={{ padding: '10px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px' }}>
-            Edit Commission Rules
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+     {user.role === 'admin' && (
+  <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
+    <h3>Admin Panel - Edit Rules</h3>
+    <label>
+      Commission %:
+      <input
+        type="number"
+        value={commissionRate}
+        onChange={(e) => setCommissionRate(e.target.value)}
+        style={{ padding: '10px', margin: '10px', width: '100px' }}
+      />
+    </label>
+    <br />
+    <label>
+      Stock Allocation %:
+      <input
+        type="number"
+        value={stockRate}
+        onChange={(e) => setStockRate(e.target.value)}
+        style={{ padding: '10px', margin: '10px', width: '100px' }}
+      />
+    </label>
+    <br />
+    <label>
+      Bonus Pool %:
+      <input
+        type="number"
+        value={bonusRate}
+        onChange={(e) => setBonusRate(e.target.value)}
+        style={{ padding: '10px', margin: '10px', width: '100px' }}
+      />
+    </label>
+    <br />
+    <label>
+      Weekly Bonus Pool Prize (ZAR):
+      <input
+        type="number"
+        value={bonusPoolAmount}
+        onChange={(e) => setBonusPoolAmount(e.target.value)}
+        style={{ padding: '10px', margin: '10px', width: '150px' }}
+      />
+    </label>
+    <br />
+    <button
+      onClick={saveRules}
+      style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px', marginTop: '20px' }}
+    >
+      Save Rules
+    </button>
+  </div>
+)}
 
 export default App;
