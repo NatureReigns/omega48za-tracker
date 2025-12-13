@@ -52,57 +52,37 @@ function App() {
 
   // Login Screen
   if (user === null) {
-    return (
-      <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
-        <h1 style={{ color: '#1B4D3E' }}>Nature Reigns Omega48</h1>
-        <p style={{ color: '#555' }}>Enter your SA number</p>
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="082 123 4567"
-          value={phoneInput}
-          onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ''))}
-          style={{
-            padding: '14px',
-            fontSize: '18px',
-            width: '240px',
-            borderRadius: '8px',
-            border: '2px solid #D4AF37',
-            marginBottom: '20px',
-          }}
-        />
-        <br />
-        <button
-          onClick={signInWithPhone}
-          style={{
-            padding: '14px 32px',
-            fontSize: '18px',
-            background: '#1B4D3E',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            marginBottom: '20px',
-          }}
-        >
-          Send OTP
-        </button>
-        <br />
-        <button
-          onClick={() => setUser({ phone: '0727088491', role: 'admin' })}
-          style={{
-            padding: '12px 24px',
-            fontSize: '16px',
-            background: '#D4AF37',
-            color: 'black',
-            border: 'none',
-            borderRadius: '8px',
-          }}
-        >
-          Demo Login (Admin)
-        </button>
-      </div>
-    );
-  }
+  return (
+    <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
+      <h1 style={{ color: '#1B4D3E' }}>Nature Reigns Omega48</h1>
+      <img src="https://example.com/your-logo-url.png" alt="Nature Reigns Logo" style={{ width: '300px', marginBottom: '20px' }} /> {/* Replace with actual logo URL once uploaded */}
+      <p style={{ color: '#555' }}>Enter your SA number</p>
+      <input
+        type="text"
+        inputMode="numeric"
+        placeholder="082 123 4567"
+        value={phoneInput}
+        onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ''))}
+        style={{
+          padding: '14px',
+          fontSize: '18px',
+          width: '240px',
+          borderRadius: '8px',
+          border: '2px solid #D4AF37',
+          marginBottom: '20px',
+        }}
+      />
+      <br />
+      <button onClick={signInWithPhone} style={{ /* existing styles */ }}>
+        Send OTP
+      </button>
+      <br /><br />
+      <button onClick={() => setUser({ phone: '0727088491', role: 'admin' })} style={{ /* existing styles */ }}>
+        Demo Login (Admin)
+      </button>
+    </div>
+  );
+}
 
   // Main Dashboard
   return (
