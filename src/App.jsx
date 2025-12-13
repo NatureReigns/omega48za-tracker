@@ -50,9 +50,9 @@ const saveRules = () => {
   alert(`Rules saved successfully!\nCommission: ${commissionRate}%\nStock Allocation: ${stockRate}%\nBonus Pool: ${bonusRate}%\nWeekly Prize: R${bonusPoolAmount}`);
 };
   const totalSales = sales.reduce((sum, s) => sum + (s.amount_zar || 0), 0);
-  const commission = totalSales * 0.3;
-  const stockAlloc = totalSales * 0.5;
-
+  const commission = totalSales * (commissionRate / 100);
+const stockAlloc = totalSales * (stockRate / 100);
+const bonusAlloc = totalSales * (bonusRate / 100); // Optional display later
   if (loading) {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
   }
