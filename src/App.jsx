@@ -18,9 +18,11 @@ function App() {
       setUser(session?.user ?? null);
       setLoading(false);
     });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -57,7 +59,6 @@ function App() {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
   }
 
-  // Login Screen
   if (user === null) {
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
@@ -112,10 +113,9 @@ function App() {
     );
   }
 
-  // Main Dashboard
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ color: '#1B4D3E' }}>Welcome {user.phone}</h1>
+      <h1 style={{ color: '#1B4D3E' }}>Welcome {user.phone || 'Agent'}</h1>
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
@@ -132,74 +132,8 @@ function App() {
         </div>
       </div>
 
-      {/* Weekly Leaderboard */}
       <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
         <ol style={{ paddingLeft: '20px' }}>
           <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
-            <strong>1. 0727088491 (You)</strong> - R{totalSales.toFixed(2)}
-          </li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>2. Agent 0821234567 - R4,800.00</li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>3. Agent 0839876543 - R3,900.00</li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>4. Agent 0765554444 - R3,200.00</li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>5. Agent 0612345678 - R2,700.00</li>
-        </ol>
-        <p style={{ fontStyle: 'italic', color: '#555', marginTop: '10px' }}>Updates live with every sale!</p>
-      </div>
-
-      {user.role === 'admin' && (
-        <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
-          <h3>Admin Panel - Edit Rules</h3>
-          <label>
-            Commission %:
-            <input
-              type="number"
-              value={commissionRate}
-              onChange={(e) => setCommissionRate(e.target.value)}
-              style={{ padding: '10px', margin: '10px', width: '100px' }}
-            />
-          </label>
-          <br />
-          <label>
-            Stock Allocation %:
-            <input
-              type="number"
-              value={stockRate}
-              onChange={(e) => setStockRate(e.target.value)}
-              style={{ padding: '10px', margin: '10px', width: '100px' }}
-            />
-          </label>
-          <br />
-          <label>
-            Bonus Pool %:
-            <input
-              type="number"
-              value={bonusRate}
-              onChange={(e) => setBonusRate(e.target.value)}
-              style={{ padding: '10px', margin: '10px', width: '100px' }}
-            />
-          </label>
-          <br />
-          <label>
-            Weekly Bonus Pool Prize (ZAR):
-            <input
-              type="number"
-              value={bonusPoolAmount}
-              onChange={(e) => setBonusPoolAmount(e.target.value)}
-              style={{ padding: '10px', margin: '10px', width: '150px' }}
-            />
-          </label>
-          <br />
-          <button
-            onClick={saveRules}
-            style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px', marginTop: '20px' }}
-          >
-            Save Rules
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default App;
+            <strong>1. {
