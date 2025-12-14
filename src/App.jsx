@@ -8,6 +8,7 @@ function App() {
   const [phoneInput, setPhoneInput] = useState('');
   const [fullName, setFullName] = useState('');
   const [areaCode, setAreaCode] = useState('');
+  const [referrerPhone, setReferrerPhone] = useState('');
   const [showSignup, setShowSignup] = useState(false);
   const [amount, setAmount] = useState('');
   const [bottles, setBottles] = useState('');
@@ -16,7 +17,9 @@ function App() {
   const [stockRate, setStockRate] = useState(50);
   const [bonusRate, setBonusRate] = useState(20);
   const [bonusPoolAmount, setBonusPoolAmount] = useState(5000);
-  const [leaderboard, setLeaderboard] = useState([]);
+  const [overrideRate, setOverrideRate] = useState(10);
+  const [downline, setDownline] = useState([]);
+  const [overrideEarnings, setOverrideEarnings] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -51,70 +54,45 @@ function App() {
           setBonusPoolAmount(data.bonus_pool_amount || 5000);
         }
       });
+
+      // Load referral override rate
+      supabase.from('referral_rules').select('*').single().then(({ data }) => {
+        if (data) {
+          setOverrideRate(data.override_rate || 10);
+        }
+      });
     }
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      const loadLeaderboard = async () => {
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    if (user && profile) {
+      // Load downline and calculate override earnings
+      const loadDownline = async () => {
+        const { data: downlineProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, area_code')
+          .eq('referrer_id', user.id);
 
-        const { data, error } = await supabase
-          .from('sales')
-          .select('agent_id, amount_zar')
-          .gte('created_at', oneWeekAgo.toISOString());
+        if (downlineProfiles) {
+          const downlineIds = downlineProfiles.map(p => p.id);
 
-        if (error) {
-          console.error('Error loading leaderboard:', error);
-          return;
+          if (downlineIds.length > 0) {
+            const { data: downlineSales } = await supabase
+              .from('sales')
+              .select('agent_id, amount_zar')
+              .in('agent_id', downlineIds);
+
+            const earnings = downlineSales.reduce((sum, s) => sum + (s.amount_zar * (overrideRate / 100)), 0);
+            setOverrideEarnings(earnings);
+          }
+
+          setDownline(downlineProfiles);
         }
-
-        // Aggregate by agent
-        const aggregated = data.reduce((acc, sale) => {
-          acc[sale.agent_id] = (acc[sale.agent_id] || 0) + sale.amount_zar;
-          return acc;
-        }, {});
-
-        // Get profiles for names
-        const agentIds = Object.keys(aggregated);
-        if (agentIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, full_name')
-            .in('id', agentIds);
-
-          const profileMap = (profiles || []).reduce((map, p) => {
-            map[p.id] = p.full_name;
-            return map;
-          }, {});
-        }
-
-        // Sort and take top 10
-        const ranked = Object.entries(aggregated)
-          .map(([agent_id, weekly_sales]) => ({
-            agent_id,
-            full_name: profileMap[agent_id],
-            phone: agent_id,
-            weekly_sales,
-          }))
-          .sort((a, b) => b.weekly_sales - a.weekly_sales)
-          .slice(0, 10);
-
-        setLeaderboard(ranked);
       };
 
-      loadLeaderboard();
-
-      // Real-time subscription
-      const subscription = supabase
-        .channel('sales-changes')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, loadLeaderboard)
-        .subscribe();
-
-      return () => supabase.removeChannel(subscription);
+      loadDownline();
     }
-  }, [user]);
+  }, [user, profile, overrideRate]);
 
   const signInWithPhone = () => {
     setUser({ id: 'demo', phone: phoneInput || '0727088491', role: 'admin' });
@@ -122,17 +100,28 @@ function App() {
 
   const saveProfile = async () => {
     if (!fullName || !areaCode) return alert('Please enter your name and area');
+    let referrerId = null;
+    if (referrerPhone) {
+      const { data: referrer } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', referrerPhone.replace(/\D/g, ''))
+        .single();
+      referrerId = referrer?.id || null;
+    }
+
     const { error } = await supabase.from('profiles').insert({
       id: user.id,
       full_name: fullName,
       area_code: areaCode,
+      referrer_id: referrerId,
     });
     if (error) {
       alert('Error saving profile: ' + error.message);
     } else {
       setProfile({ full_name: fullName, area_code: areaCode });
       setShowSignup(false);
-      alert('Profile saved!');
+      alert('Profile saved! Welcome to Omega48ZA.');
     }
   };
 
@@ -261,6 +250,22 @@ function App() {
             width: '240px',
             borderRadius: '8px',
             border: '2px solid #D4AF37',
+            marginBottom: '10px',
+          }}
+        />
+        <br />
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="Referrer Phone (optional)"
+          value={referrerPhone}
+          onChange={(e) => setReferrerPhone(e.target.value.replace(/\D/g, ''))}
+          style={{
+            padding: '14px',
+            fontSize: '18px',
+            width: '240px',
+            borderRadius: '8px',
+            border: '2px solid #D4AF37',
             marginBottom: '20px',
           }}
         />
@@ -284,8 +289,9 @@ function App() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
+      <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || user.phone ?? 'Seller'}</h1>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
+      <p><strong>Referral Code: {user.phone}</strong> (Share this with recruits)</p>
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
@@ -299,23 +305,23 @@ function App() {
           <p><strong>Commission ({commissionRate}%):</strong> R{commission.toFixed(2)}</p>
           <p><strong>Stock Allocation ({stockRate}%):</strong> R{stockAlloc.toFixed(2)}</p>
           <p><strong>Bonus Pool ({bonusRate}%):</strong> R{bonusAlloc.toFixed(2)}</p>
+          <p><strong>Referral Override Earnings ({overrideRate}%):</strong> R{overrideEarnings.toFixed(2)}</p>
         </div>
       </div>
 
       <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
-        {leaderboard.length === 0 ? (
-          <p>No sales this week yet</p>
+        <h2 style={{ color: '#1B4D3E' }}>Your Downline ({downline.length} recruits)</h2>
+        {downline.length === 0 ? (
+          <p>No recruits yet. Share your referral code: {user.phone}</p>
         ) : (
-          <ol style={{ paddingLeft: '20px' }}>
-            {leaderboard.map((entry, index) => (
-              <li key={entry.agent_id} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
-                <strong>{index + 1}. {entry.full_name || entry.phone} {entry.agent_id === user.id ? '(You)' : ''}</strong> - R{entry.weekly_sales.toFixed(2)}
+          <ul style={{ paddingLeft: '20px' }}>
+            {downline.map((recruit) => (
+              <li key={recruit.id} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+                {recruit.full_name} from {recruit.area_code}
               </li>
             ))}
-          </ol>
+          </ul>
         )}
-        <p style={{ fontStyle: 'italic', color: '#555', marginTop: '10px' }}>Updates live with every sale!</p>
       </div>
 
       {user.role === 'admin' && (
@@ -332,39 +338,16 @@ function App() {
           </label>
           <br />
           <label>
-            Stock Allocation %:
+            Referral Override %:
             <input
               type="number"
-              value={stockRate}
-              onChange={(e) => setStockRate(Number(e.target.value) || 50)}
+              value={overrideRate}
+              onChange={(e) => setOverrideRate(Number(e.target.value) || 10)}
               style={{ padding: '10px', margin: '10px', width: '100px' }}
             />
           </label>
           <br />
-          <label>
-            Bonus Pool %:
-            <input
-              type="number"
-              value={bonusRate}
-              onChange={(e) => setBonusRate(Number(e.target.value) || 20)}
-              style={{ padding: '10px', margin: '10px', width: '100px' }}
-            />
-          </label>
-          <br />
-          <label>
-            Weekly Bonus Pool Prize (ZAR):
-            <input
-              type="number"
-              value={bonusPoolAmount}
-              onChange={(e) => setBonusPoolAmount(Number(e.target.value) || 5000)}
-              style={{ padding: '10px', margin: '10px', width: '150px' }}
-            />
-          </label>
-          <br />
-          <button
-            onClick={saveRules}
-            style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px', marginTop: '20px' }}
-          >
+          <button onClick={saveRules} style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px', marginTop: '20px' }}>
             Save Rules
           </button>
         </div>
