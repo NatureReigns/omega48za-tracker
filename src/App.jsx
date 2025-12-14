@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient.jsx';
+import { supabase } from './supabaseclient.jsx';
 
 function App() {
   const [user, setUser] = useState(null);
