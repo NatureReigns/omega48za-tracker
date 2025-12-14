@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseclient.jsx';
+import { supabase } from './supabaseClient.jsx';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -69,7 +69,6 @@ function App() {
         const { data, error } = await supabase.storage
           .from('deposit-photos')
           .list(`${user.id}/`);
-
         if (error) {
           console.error('Error loading photos:', error);
         } else {
@@ -82,7 +81,6 @@ function App() {
           setUploadedPhotos(urls);
         }
       };
-
       loadUploadedPhotos();
     }
   }, [user]);
@@ -98,69 +96,66 @@ function App() {
       const { data } = await supabase.from('profiles').select('id').eq('phone', referrerPhone.replace(/\D/g, '')).single();
       referrerId = data?.id || null;
     }
-
     const { error } = await supabase.from('profiles').insert({
       id: user.id,
       full_name: fullName,
       area_code: areaCode,
       referrer_id: referrerId,
+      stock_balance: 50,
     });
     if (error) {
       alert('Error saving profile: ' + error.message);
     } else {
-      setProfile({ full_name: fullName, area_code: areaCode });
+      setProfile({ full_name: fullName, area_code: areaCode, stock_balance: 50 });
       setShowSignup(false);
       alert('Profile saved!');
     }
   };
 
   const addSale = async () => {
-  if (!amount || !bottles) return alert('Enter amount and bottles');
-  const bottlesNum = Number(bottles);
-  const currentStock = profile?.stock_balance || 0;
-  if (currentStock < bottlesNum) {
-    return alert('Insufficient stock! Current stock: ' + currentStock + ' bottles');
-  }
-
-  const { error } = await supabase.from('sales').insert({
-    agent_id: user.id,
-    amount_zar: Number(amount),
-    bottles_sold: bottlesNum,
-  });
-  if (error) {
-    alert('Error saving sale: ' + error.message);
-  } else {
-    const newBalance = currentStock - bottlesNum;
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ stock_balance: newBalance })
-      .eq('id', user.id);
-    if (updateError) {
-      alert('Sale saved but failed to update stock balance.');
-    } else {
-      setProfile({ ...profile, stock_balance: newBalance });
+    if (!amount || !bottles) return alert('Enter amount and bottles');
+    const bottlesNum = Number(bottles);
+    const currentStock = profile?.stock_balance || 0;
+    if (currentStock < bottlesNum) {
+      return alert('Insufficient stock! Current stock: ' + currentStock + ' bottles');
     }
-    setAmount('');
-    setBottles('');
-    alert('Sale saved! Stock updated to ' + newBalance + ' bottles');
-  }
-};
+
+    const { error } = await supabase.from('sales').insert({
+      agent_id: user.id,
+      amount_zar: Number(amount),
+      bottles_sold: bottlesNum,
+    });
+    if (error) {
+      alert('Error saving sale: ' + error.message);
+    } else {
+      const newBalance = currentStock - bottlesNum;
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ stock_balance: newBalance })
+        .eq('id', user.id);
+      if (updateError) {
+        alert('Sale saved but failed to update stock balance.');
+      } else {
+        setProfile({ ...profile, stock_balance: newBalance });
+      }
+      setAmount('');
+      setBottles('');
+      alert('Sale saved! Stock updated to ' + newBalance + ' bottles');
+    }
+  };
 
   const uploadDepositPhoto = async () => {
     if (!depositPhoto) return alert('Please select a photo');
     const fileExt = depositPhoto.name.split('.').pop();
     const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-
     const { error } = await supabase.storage
       .from('deposit-photos')
       .upload(fileName, depositPhoto);
-
     if (error) {
       alert('Error uploading photo: ' + error.message);
     } else {
       alert('Deposit photo uploaded successfully!');
       setDepositPhoto(null);
-      // Reload photos
       const { data } = await supabase.storage
         .from('deposit-photos')
         .list(`${user.id}/`);
@@ -305,10 +300,6 @@ function App() {
             border: '2px solid #D4AF37',
             marginBottom: '20px',
           }}
-          <p style={{ fontWeight: 'bold', color: (profile?.stock_balance || 0) < 10 ? 'red' : 'green' }}>
-  Current Stock: {profile?.stock_balance || 0} bottles
-  {(profile?.stock_balance || 0) < 10 ? ' (Low stock - restock needed)' : ''}
-</p>
         />
         <br />
         <button
@@ -330,18 +321,14 @@ function App() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-<h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
+      <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
       <p style={{ fontWeight: 'bold', color: (profile?.stock_balance || 0) < 10 ? 'red' : 'green' }}>
-  Current Stock: {profile?.stock_balance || 0} bottles
-  {(profile?.stock_balance || 0) < 10 ? ' (Low stock - restock needed)' : ''}
-</p>
+        Current Stock: {profile?.stock_balance || 0} bottles
+        {(profile?.stock_balance || 0) < 10 ? ' (Low stock - restock needed)' : ''}
+      </p>
       <p><strong>Your Referral Code: {user.phone}</strong> (Share with recruits)</p>
-<img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
-<p style={{ fontWeight: 'bold', color: (profile?.stock_balance || 0) < 10 ? 'red' : 'green' }}>
-  Current Stock: {profile?.stock_balance || 0} bottles
-  {(profile?.stock_balance || 0) < 10 ? ' (Low stock - restock needed)' : ''}
-</p>
+      <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
         <input placeholder="Amount (ZAR)" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
@@ -369,7 +356,6 @@ function App() {
         <button onClick={uploadDepositPhoto} style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px' }}>
           Upload Photo
         </button>
-
         {uploadedPhotos.length > 0 && (
           <div style={{ marginTop: '20px' }}>
             <h3>Your Uploaded Deposits</h3>
