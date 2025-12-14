@@ -61,12 +61,12 @@ function App() {
       id: user.id,
       full_name: fullName,
       area_code: areaCode,
-      stock_balance: 0, // Initial stock
+      stock_balance: 50, // Initial stock for testing; adjust as needed
     });
     if (error) {
       alert('Error saving profile: ' + error.message);
     } else {
-      setProfile({ full_name: fullName, area_code: areaCode, stock_balance: 0 });
+      setProfile({ full_name: fullName, area_code: areaCode, stock_balance: 50 });
       setShowSignup(false);
       alert('Profile saved!');
     }
@@ -75,7 +75,9 @@ function App() {
   const addSale = async () => {
     if (!amount || !bottles) return alert('Enter amount and bottles');
     const bottlesNum = Number(bottles);
-    if (profile.stock_balance < bottlesNum) return alert('Insufficient stock!');
+    if ((profile?.stock_balance || 0) < bottlesNum) {
+      return alert('Insufficient stock! Please restock before selling.');
+    }
 
     const { error } = await supabase.from('sales').insert({
       agent_id: user.id,
@@ -85,8 +87,8 @@ function App() {
     if (error) {
       alert('Error saving sale: ' + error.message);
     } else {
-      // Update stock balance
-      const newBalance = profile.stock_balance - bottlesNum;
+      // Deduct from stock balance
+      const newBalance = (profile.stock_balance || 0) - bottlesNum;
       await supabase.from('profiles').update({ stock_balance: newBalance }).eq('id', user.id);
       setProfile({ ...profile, stock_balance: newBalance });
       setAmount('');
@@ -229,8 +231,8 @@ function App() {
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || user.phone ?? 'Seller'}</h1>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
-      <p style={{ fontWeight: 'bold', color: profile?.stock_balance < 10 ? 'red' : 'green' }}>
-        Current Stock: {profile?.stock_balance || 0} bottles {profile?.stock_balance < 10 ? '(Low stock - restock needed)' : ''}
+      <p style={{ fontWeight: 'bold', color: (profile?.stock_balance || 0) < 10 ? 'red' : 'green' }}>
+        Current Stock: {profile?.stock_balance || 0} bottles {(profile?.stock_balance || 0) < 10 ? '(Low stock - restock needed)' : ''}
       </p>
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
@@ -248,8 +250,14 @@ function App() {
         </div>
       </div>
 
-      {/* Leaderboard and admin panel as before */}
-      {/* ... (keep your existing leaderboard and admin panel code) */}
+      {/* Keep your existing leaderboard and admin panel sections here */}
+
+      {user.role === 'admin' && (
+        <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
+          <h3>Admin Panel - Edit Rules</h3>
+          {/* ... existing admin inputs and button ... */}
+        </div>
+      )}
     </div>
   );
 }
