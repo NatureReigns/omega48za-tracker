@@ -337,7 +337,12 @@ function App() {
   {(profile?.stock_balance || 0) < 10 ? ' (Low stock - restock needed)' : ''}
 </p>
       <p><strong>Your Referral Code: {user.phone}</strong> (Share with recruits)</p>
-      <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
+<img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
+
+<p style={{ fontWeight: 'bold', color: (profile?.stock_balance || 0) < 10 ? 'red' : 'green' }}>
+  Current Stock: {profile?.stock_balance || 0} bottles
+  {(profile?.stock_balance || 0) < 10 ? ' (Low stock - restock needed)' : ''}
+</p>
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
         <input placeholder="Amount (ZAR)" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
