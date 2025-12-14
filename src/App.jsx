@@ -78,15 +78,17 @@ function App() {
 
         // Get profiles for names
         const agentIds = Object.keys(aggregated);
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', agentIds);
+        if (agentIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', agentIds);
 
-        const profileMap = (profiles || []).reduce((map, p) => {
-          map[p.id] = p.full_name;
-          return map;
-        }, {});
+          const profileMap = (profiles || []).reduce((map, p) => {
+            map[p.id] = p.full_name;
+            return map;
+          }, {});
+        }
 
         // Sort and take top 10
         const ranked = Object.entries(aggregated)
