@@ -26,6 +26,9 @@ function App() {
       setUser(session?.user ?? null);
       setLoading(false);
     });
+    const [depositPhoto, setDepositPhoto] = useState(null);
+const [uploadedPhotos, setUploadedPhotos] = useState([]);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
