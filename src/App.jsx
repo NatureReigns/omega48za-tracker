@@ -127,20 +127,35 @@ function App() {
   };
 
   const addSale = async () => {
-    if (!amount || !bottles) return alert('Enter amount and bottles');
-    const { error } = await supabase.from('sales').insert({
-      agent_id: user.id,
-      amount_zar: Number(amount),
-      bottles_sold: Number(bottles),
-    });
-    if (error) {
-      alert('Error saving sale: ' + error.message);
+  if (!amount || !bottles) return alert('Enter amount and bottles');
+  const bottlesNum = Number(bottles);
+  if ((profile?.stock_balance || 0) < bottlesNum) {
+    return alert('Insufficient stock! Please restock before selling.');
+  }
+
+  const { error } = await supabase.from('sales').insert({
+    agent_id: user.id,
+    amount_zar: Number(amount),
+    bottles_sold: bottlesNum,
+  });
+  if (error) {
+    alert('Error saving sale: ' + error.message);
+  } else {
+    const newBalance = (profile.stock_balance || 0) - bottlesNum;
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ stock_balance: newBalance })
+      .eq('id', user.id);
+    if (updateError) {
+      alert('Sale saved but failed to update stock balance.');
     } else {
-      setAmount('');
-      setBottles('');
-      alert('Sale saved!');
+      setProfile({ ...profile, stock_balance: newBalance });
     }
-  };
+    setAmount('');
+    setBottles('');
+    alert('Sale saved! Stock updated.');
+  }
+};
 
   const saveRules = async () => {
     const { error } = await supabase.from('rules').upsert({
