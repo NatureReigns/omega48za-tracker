@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseclient.jsx';
+import { supabase } from './supabaseClient.jsx';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -36,7 +36,6 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      // Load profile
       supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data, error }) => {
         if (data) {
           setProfile(data);
@@ -45,7 +44,6 @@ function App() {
         }
       });
 
-      // Load rules
       supabase.from('rules').select('*').single().then(({ data }) => {
         if (data) {
           setCommissionRate(data.commission_rate || 30);
@@ -55,7 +53,6 @@ function App() {
         }
       });
 
-      // Load override rate
       supabase.from('referral_rules').select('*').single().then(({ data }) => {
         if (data) {
           setOverrideRate(data.override_rate || 10);
@@ -66,16 +63,41 @@ function App() {
 
   useEffect(() => {
     if (user && profile) {
-      // Load downline
-      supabase.from('profiles').select('id, full_name, area_code').eq('referrer_id', user.id).then(({ data }) => {
-        setDownline(data || []);
-      });
+      const loadDownlineAndEarnings = async () => {
+        // Load downline
+        const { data: downlineProfiles } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('referrer_id', user.id);
 
-      // Calculate override earnings (simple total for now)
-      // In production, this would aggregate downline sales
-      setOverrideEarnings(0); // Placeholder - can be enhanced later
+        setDownline(downlineProfiles || []);
+
+        if (downlineProfiles && downlineProfiles.length > 0) {
+          const downlineIds = downlineProfiles.map(p => p.id);
+
+          const { data: downlineSales } = await supabase
+            .from('sales')
+            .select('amount_zar')
+            .in('agent_id', downlineIds);
+
+          const totalDownlineSales = (downlineSales || []).reduce((sum, s) => sum + s.amount_zar, 0);
+          setOverrideEarnings(totalDownlineSales * (overrideRate / 100));
+        } else {
+          setOverrideEarnings(0);
+        }
+      };
+
+      loadDownlineAndEarnings();
+
+      // Real-time subscription for downline sales
+      const subscription = supabase
+        .channel('downline-sales')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales', filter: `agent_id=in.(${downline.map(d => d.id).join(',')})` }, loadDownlineAndEarnings)
+        .subscribe();
+
+      return () => supabase.removeChannel(subscription);
     }
-  }, [user, profile]);
+  }, [user, profile, overrideRate]);
 
   const signInWithPhone = () => {
     setUser({ id: 'demo', phone: phoneInput || '0727088491', role: 'admin' });
@@ -272,7 +294,7 @@ function App() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-<h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
+      <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || user.phone ?? 'Seller'}</h1>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
       <p><strong>Your Referral Code: {user.phone}</strong> (Share with recruits)</p>
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
