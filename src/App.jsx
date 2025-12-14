@@ -277,7 +277,7 @@ function App() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || user.phone ?? 'Seller'}</h1>
+<h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
       <p style={{ fontWeight: 'bold', fontSize: '18px' }}>
         Weekly Payout: R{weeklyPayout.toFixed(2)} (Paid every Friday via PayShap)
