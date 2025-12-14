@@ -9,7 +9,6 @@ function App() {
   const [fullName, setFullName] = useState('');
   const [areaCode, setAreaCode] = useState('');
   const [showSignup, setShowSignup] = useState(false);
-
   const [amount, setAmount] = useState('');
   const [bottles, setBottles] = useState('');
   const [sales, setSales] = useState([]);
@@ -17,73 +16,13 @@ function App() {
   const [stockRate, setStockRate] = useState(50);
   const [bonusRate, setBonusRate] = useState(20);
   const [bonusPoolAmount, setBonusPoolAmount] = useState(5000);
+  const [leaderboard, setLeaderboard] = useState([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
-    const [leaderboard, setLeaderboard] = useState([]);
-
-useEffect(() => {
-  if (user) {
-    const loadLeaderboard = async () => {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-      const { data, error } = await supabase
-        .from('sales')
-        .select('agent_id, amount_zar')
-        .gte('created_at', oneWeekAgo.toISOString());
-
-      if (error) {
-        console.error('Error loading leaderboard:', error);
-        return;
-      }
-
-      // Aggregate by agent
-      const aggregated = data.reduce((acc, sale) => {
-        acc[sale.agent_id] = (acc[sale.agent_id] || 0) + sale.amount_zar;
-        return acc;
-      }, {});
-
-      // Get profiles for names
-      const agentIds = Object.keys(aggregated);
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', agentIds);
-
-      const profileMap = profiles.reduce((map, p) => {
-        map[p.id] = p.full_name;
-        return map;
-      }, {});
-
-      // Sort and take top 10
-      const ranked = Object.entries(aggregated)
-        .map(([agent_id, weekly_sales]) => ({
-          agent_id,
-          full_name: profileMap[agent_id],
-          phone: agent_id, // fallback
-          weekly_sales,
-        }))
-        .sort((a, b) => b.weekly_sales - a.weekly_sales)
-        .slice(0, 10);
-
-      setLeaderboard(ranked);
-    };
-
-    loadLeaderboard();
-
-    // Real-time subscription
-    const subscription = supabase
-      .channel('sales-changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, loadLeaderboard)
-      .subscribe();
-
-    return () => supabase.removeChannel(subscription);
-  }
-}, [user]);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -98,7 +37,7 @@ useEffect(() => {
       supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data, error }) => {
         if (data) {
           setProfile(data);
-        } else if (error && error.code === 'PGRST116') { // No profile found
+        } else if (error && error.code === 'PGRST116') {
           setShowSignup(true);
         }
       });
@@ -115,8 +54,67 @@ useEffect(() => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (user) {
+      const loadLeaderboard = async () => {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+        const { data, error } = await supabase
+          .from('sales')
+          .select('agent_id, amount_zar')
+          .gte('created_at', oneWeekAgo.toISOString());
+
+        if (error) {
+          console.error('Error loading leaderboard:', error);
+          return;
+        }
+
+        // Aggregate by agent
+        const aggregated = data.reduce((acc, sale) => {
+          acc[sale.agent_id] = (acc[sale.agent_id] || 0) + sale.amount_zar;
+          return acc;
+        }, {});
+
+        // Get profiles for names
+        const agentIds = Object.keys(aggregated);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', agentIds);
+
+        const profileMap = (profiles || []).reduce((map, p) => {
+          map[p.id] = p.full_name;
+          return map;
+        }, {});
+
+        // Sort and take top 10
+        const ranked = Object.entries(aggregated)
+          .map(([agent_id, weekly_sales]) => ({
+            agent_id,
+            full_name: profileMap[agent_id],
+            phone: agent_id,
+            weekly_sales,
+          }))
+          .sort((a, b) => b.weekly_sales - a.weekly_sales)
+          .slice(0, 10);
+
+        setLeaderboard(ranked);
+      };
+
+      loadLeaderboard();
+
+      // Real-time subscription
+      const subscription = supabase
+        .channel('sales-changes')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, loadLeaderboard)
+        .subscribe();
+
+      return () => supabase.removeChannel(subscription);
+    }
+  }, [user]);
+
   const signInWithPhone = () => {
-    // Demo mode - skip real OTP
     setUser({ id: 'demo', phone: phoneInput || '0727088491', role: 'admin' });
   };
 
@@ -284,39 +282,11 @@ useEffect(() => {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-     <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
+      <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-  <h2>Add Sale</h2>
-  {/* ... existing sales entry code ... */}
-  <div style={{ marginTop: '20px' }}>
-    {/* ... existing calculation paragraphs ... */}
-  </div>
-</div>
-
-{/* Insert the leaderboard here */}
-<div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-  <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
-  {leaderboard.length === 0 ? (
-    <p>No sales this week yet</p>
-  ) : (
-    <ol style={{ paddingLeft: '20px' }}>
-      {leaderboard.map((entry, index) => (
-        <li key={entry.agent_id} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
-          <strong>{index + 1}. {entry.full_name || entry.phone} {entry.agent_id === user.id ? '(You)' : ''}</strong> - R{entry.weekly_sales.toFixed(2)}
-        </li>
-      ))}
-    </ol>
-  )}
-  <p style={{ fontStyle: 'italic', color: '#555', marginTop: '10px' }}>Updates live with every sale!</p>
-</div>
-
-{user.role === 'admin' && (
-  {/* ... existing admin panel ... */}
-)}
         <input placeholder="Amount (ZAR)" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
         <input placeholder="Bottles" value={bottles} onChange={(e) => setBottles(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
         <button onClick={addSale} style={{ padding: '10px 20px', background: '#D4AF37', border: 'none', borderRadius: '6px' }}>
@@ -332,15 +302,17 @@ useEffect(() => {
 
       <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
-        <ol style={{ paddingLeft: '20px' }}>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
-            <strong>1. {profile?.full_name || (user.phone ?? 'You')} (You)</strong>
-          </li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>2. Agent 0821234567 - R4,800.00</li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>3. Agent 0839876543 - R3,900.00</li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>4. Agent 0765554444 - R3,200.00</li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>5. Agent 0612345678 - R2,700.00</li>
-        </ol>
+        {leaderboard.length === 0 ? (
+          <p>No sales this week yet</p>
+        ) : (
+          <ol style={{ paddingLeft: '20px' }}>
+            {leaderboard.map((entry, index) => (
+              <li key={entry.agent_id} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+                <strong>{index + 1}. {entry.full_name || entry.phone} {entry.agent_id === user.id ? '(You)' : ''}</strong> - R{entry.weekly_sales.toFixed(2)}
+              </li>
+            ))}
+          </ol>
+        )}
         <p style={{ fontStyle: 'italic', color: '#555', marginTop: '10px' }}>Updates live with every sale!</p>
       </div>
 
