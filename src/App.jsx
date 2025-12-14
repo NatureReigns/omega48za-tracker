@@ -20,15 +20,14 @@ function App() {
   const [overrideRate, setOverrideRate] = useState(10);
   const [downline, setDownline] = useState([]);
   const [overrideEarnings, setOverrideEarnings] = useState(0);
+  const [depositPhoto, setDepositPhoto] = useState(null);
+  const [uploadedPhotos, setUploadedPhotos] = useState([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
-    const [depositPhoto, setDepositPhoto] = useState(null);
-const [uploadedPhotos, setUploadedPhotos] = useState([]);
-    
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -65,42 +64,28 @@ const [uploadedPhotos, setUploadedPhotos] = useState([]);
   }, [user]);
 
   useEffect(() => {
-    if (user && profile) {
-      const loadDownlineAndEarnings = async () => {
-        // Load downline
-        const { data: downlineProfiles } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('referrer_id', user.id);
+    if (user) {
+      const loadUploadedPhotos = async () => {
+        const { data, error } = await supabase.storage
+          .from('deposit-photos')
+          .list(`${user.id}/`);
 
-        setDownline(downlineProfiles || []);
-
-        if (downlineProfiles && downlineProfiles.length > 0) {
-          const downlineIds = downlineProfiles.map(p => p.id);
-
-          const { data: downlineSales } = await supabase
-            .from('sales')
-            .select('amount_zar')
-            .in('agent_id', downlineIds);
-
-          const totalDownlineSales = (downlineSales || []).reduce((sum, s) => sum + s.amount_zar, 0);
-          setOverrideEarnings(totalDownlineSales * (overrideRate / 100));
+        if (error) {
+          console.error('Error loading photos:', error);
         } else {
-          setOverrideEarnings(0);
+          const urls = data.map(file => {
+            const { data: urlData } = supabase.storage
+              .from('deposit-photos')
+              .getPublicUrl(`${user.id}/${file.name}`);
+            return urlData.publicUrl;
+          });
+          setUploadedPhotos(urls);
         }
       };
 
-      loadDownlineAndEarnings();
-
-      // Real-time subscription for downline sales
-      const subscription = supabase
-        .channel('downline-sales')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales', filter: `agent_id=in.(${downline.map(d => d.id).join(',')})` }, loadDownlineAndEarnings)
-        .subscribe();
-
-      return () => supabase.removeChannel(subscription);
+      loadUploadedPhotos();
     }
-  }, [user, profile, overrideRate]);
+  }, [user]);
 
   const signInWithPhone = () => {
     setUser({ id: 'demo', phone: phoneInput || '0727088491', role: 'admin' });
@@ -130,73 +115,48 @@ const [uploadedPhotos, setUploadedPhotos] = useState([]);
   };
 
   const addSale = async () => {
-  if (!amount || !bottles) return alert('Enter amount and bottles');
-  const bottlesNum = Number(bottles);
-  if ((profile?.stock_balance || 0) < bottlesNum) {
-    return alert('Insufficient stock! Please restock before selling.');
-  }
-const uploadDepositPhoto = async () => {
-  if (!depositPhoto) return alert('Please select a photo');
-  const fileExt = depositPhoto.name.split('.').pop();
-  const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-
-  const { error } = await supabase.storage
-    .from('deposit-photos')
-    .upload(fileName, depositPhoto);
-
-  if (error) {
-    alert('Error uploading photo: ' + error.message);
-  } else {
-    alert('Deposit photo uploaded successfully!');
-    setDepositPhoto(null);
-    loadUploadedPhotos();
-  }
-};
-
-const loadUploadedPhotos = async () => {
-  const { data, error } = await supabase.storage
-    .from('deposit-photos')
-    .list(`${user.id}/`);
-
-  if (error) {
-    console.error('Error loading photos:', error);
-  } else {
-    const urls = data.map(file => {
-      const { data: urlData } = supabase.storage
-        .from('deposit-photos')
-        .getPublicUrl(`${user.id}/${file.name}`);
-      return urlData.publicUrl;
+    if (!amount || !bottles) return alert('Enter amount and bottles');
+    const { error } = await supabase.from('sales').insert({
+      agent_id: user.id,
+      amount_zar: Number(amount),
+      bottles_sold: Number(bottles),
     });
-    setUploadedPhotos(urls);
-  }
-};
-
-useEffect(() => {
-  if (user) loadUploadedPhotos();
-}, [user]);
-  const { error } = await supabase.from('sales').insert({
-    agent_id: user.id,
-    amount_zar: Number(amount),
-    bottles_sold: bottlesNum,
-  });
-  if (error) {
-    alert('Error saving sale: ' + error.message);
-  } else {
-    const newBalance = (profile.stock_balance || 0) - bottlesNum;
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ stock_balance: newBalance })
-      .eq('id', user.id);
-    if (updateError) {
-      alert('Sale saved but failed to update stock balance.');
+    if (error) {
+      alert('Error saving sale: ' + error.message);
     } else {
-      setProfile({ ...profile, stock_balance: newBalance });
+      setAmount('');
+      setBottles('');
+      alert('Sale saved!');
     }
-    setAmount('');
-    setBottles('');
-    alert('Sale saved! Stock updated.');
-  }
-};
+  };
+
+  const uploadDepositPhoto = async () => {
+    if (!depositPhoto) return alert('Please select a photo');
+    const fileExt = depositPhoto.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from('deposit-photos')
+      .upload(fileName, depositPhoto);
+
+    if (error) {
+      alert('Error uploading photo: ' + error.message);
+    } else {
+      alert('Deposit photo uploaded successfully!');
+      setDepositPhoto(null);
+      // Reload photos
+      const { data } = await supabase.storage
+        .from('deposit-photos')
+        .list(`${user.id}/`);
+      const urls = data.map(file => {
+        const { data: urlData } = supabase.storage
+          .from('deposit-photos')
+          .getPublicUrl(`${user.id}/${file.name}`);
+        return urlData.publicUrl;
+      });
+      setUploadedPhotos(urls);
+    }
+  };
 
   const saveRules = async () => {
     const { error } = await supabase.from('rules').upsert({
@@ -350,7 +310,7 @@ useEffect(() => {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-<h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
+      <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || user.phone ?? 'Seller'}</h1>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
       <p><strong>Your Referral Code: {user.phone}</strong> (Share with recruits)</p>
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
@@ -368,6 +328,30 @@ useEffect(() => {
           <p><strong>Bonus Pool ({bonusRate}%):</strong> R{bonusAlloc.toFixed(2)}</p>
           <p><strong>Referral Override Earnings ({overrideRate}%):</strong> R{overrideEarnings.toFixed(2)}</p>
         </div>
+      </div>
+
+      <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ color: '#1B4D3E' }}>Deposit Proof Upload</h2>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setDepositPhoto(e.target.files[0])}
+          style={{ marginBottom: '10px' }}
+        />
+        <button onClick={uploadDepositPhoto} style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px' }}>
+          Upload Photo
+        </button>
+
+        {uploadedPhotos.length > 0 && (
+          <div style={{ marginTop: '20px' }}>
+            <h3>Your Uploaded Deposits</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {uploadedPhotos.map((url, index) => (
+                <img key={index} src={url} alt={`Deposit ${index + 1}`} style={{ maxWidth: '200px', borderRadius: '8px' }} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
