@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseclient.jsx';
+import { supabase } from './supabaseClient.jsx';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -8,6 +8,7 @@ function App() {
   const [phoneInput, setPhoneInput] = useState('');
   const [fullName, setFullName] = useState('');
   const [areaCode, setAreaCode] = useState('');
+  const [referrerPhone, setReferrerPhone] = useState('');
   const [showSignup, setShowSignup] = useState(false);
   const [amount, setAmount] = useState('');
   const [bottles, setBottles] = useState('');
@@ -16,6 +17,9 @@ function App() {
   const [stockRate, setStockRate] = useState(50);
   const [bonusRate, setBonusRate] = useState(20);
   const [bonusPoolAmount, setBonusPoolAmount] = useState(5000);
+  const [overrideRate, setOverrideRate] = useState(10);
+  const [downline, setDownline] = useState([]);
+  const [overrideEarnings, setOverrideEarnings] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -32,6 +36,7 @@ function App() {
 
   useEffect(() => {
     if (user) {
+      // Load profile
       supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data, error }) => {
         if (data) {
           setProfile(data);
@@ -40,6 +45,7 @@ function App() {
         }
       });
 
+      // Load rules
       supabase.from('rules').select('*').single().then(({ data }) => {
         if (data) {
           setCommissionRate(data.commission_rate || 30);
@@ -48,8 +54,28 @@ function App() {
           setBonusPoolAmount(data.bonus_pool_amount || 5000);
         }
       });
+
+      // Load override rate
+      supabase.from('referral_rules').select('*').single().then(({ data }) => {
+        if (data) {
+          setOverrideRate(data.override_rate || 10);
+        }
+      });
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && profile) {
+      // Load downline
+      supabase.from('profiles').select('id, full_name, area_code').eq('referrer_id', user.id).then(({ data }) => {
+        setDownline(data || []);
+      });
+
+      // Calculate override earnings (simple total for now)
+      // In production, this would aggregate downline sales
+      setOverrideEarnings(0); // Placeholder - can be enhanced later
+    }
+  }, [user, profile]);
 
   const signInWithPhone = () => {
     setUser({ id: 'demo', phone: phoneInput || '0727088491', role: 'admin' });
@@ -57,16 +83,22 @@ function App() {
 
   const saveProfile = async () => {
     if (!fullName || !areaCode) return alert('Please enter your name and area');
+    let referrerId = null;
+    if (referrerPhone) {
+      const { data } = await supabase.from('profiles').select('id').eq('phone', referrerPhone.replace(/\D/g, '')).single();
+      referrerId = data?.id || null;
+    }
+
     const { error } = await supabase.from('profiles').insert({
       id: user.id,
       full_name: fullName,
       area_code: areaCode,
-      stock_balance: 50, // Initial stock for new agents
+      referrer_id: referrerId,
     });
     if (error) {
       alert('Error saving profile: ' + error.message);
     } else {
-      setProfile({ full_name: fullName, area_code: areaCode, stock_balance: 50 });
+      setProfile({ full_name: fullName, area_code: areaCode });
       setShowSignup(false);
       alert('Profile saved!');
     }
@@ -74,25 +106,17 @@ function App() {
 
   const addSale = async () => {
     if (!amount || !bottles) return alert('Enter amount and bottles');
-    const bottlesNum = Number(bottles);
-    if ((profile?.stock_balance || 0) < bottlesNum) {
-      return alert('Insufficient stock! Please restock.');
-    }
-
     const { error } = await supabase.from('sales').insert({
       agent_id: user.id,
       amount_zar: Number(amount),
-      bottles_sold: bottlesNum,
+      bottles_sold: Number(bottles),
     });
     if (error) {
       alert('Error saving sale: ' + error.message);
     } else {
-      const newBalance = (profile.stock_balance || 0) - bottlesNum;
-      await supabase.from('profiles').update({ stock_balance: newBalance }).eq('id', user.id);
-      setProfile({ ...profile, stock_balance: newBalance });
       setAmount('');
       setBottles('');
-      alert('Sale saved! Stock updated.');
+      alert('Sale saved!');
     }
   };
 
@@ -104,8 +128,12 @@ function App() {
       bonus_rate: Number(bonusRate),
       bonus_pool_amount: Number(bonusPoolAmount),
     });
-    if (error) {
-      alert('Error saving rules: ' + error.message);
+    const { error: err2 } = await supabase.from('referral_rules').upsert({
+      id: 1,
+      override_rate: Number(overrideRate),
+    });
+    if (error || err2) {
+      alert('Error saving rules');
     } else {
       alert('Rules saved!');
     }
@@ -205,6 +233,22 @@ function App() {
             width: '240px',
             borderRadius: '8px',
             border: '2px solid #D4AF37',
+            marginBottom: '10px',
+          }}
+        />
+        <br />
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="Referrer Phone (optional)"
+          value={referrerPhone}
+          onChange={(e) => setReferrerPhone(e.target.value.replace(/\D/g, ''))}
+          style={{
+            padding: '14px',
+            fontSize: '18px',
+            width: '240px',
+            borderRadius: '8px',
+            border: '2px solid #D4AF37',
             marginBottom: '20px',
           }}
         />
@@ -228,11 +272,9 @@ function App() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-<strong>1. {profile?.full_name || (user.phone ?? 'You')} (You)</strong>
+      <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || user.phone ?? 'Seller'}</h1>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
-      <p style={{ fontWeight: 'bold', color: (profile?.stock_balance || 0) < 10 ? 'red' : 'green' }}>
-        Current Stock: {profile?.stock_balance || 0} bottles {(profile?.stock_balance || 0) < 10 ? '(Low stock - restock needed)' : ''}
-      </p>
+      <p><strong>Your Referral Code: {user.phone}</strong> (Share with recruits)</p>
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
@@ -246,21 +288,23 @@ function App() {
           <p><strong>Commission ({commissionRate}%):</strong> R{commission.toFixed(2)}</p>
           <p><strong>Stock Allocation ({stockRate}%):</strong> R{stockAlloc.toFixed(2)}</p>
           <p><strong>Bonus Pool ({bonusRate}%):</strong> R{bonusAlloc.toFixed(2)}</p>
+          <p><strong>Referral Override Earnings ({overrideRate}%):</strong> R{overrideEarnings.toFixed(2)}</p>
         </div>
       </div>
 
       <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
-        <ol style={{ paddingLeft: '20px' }}>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
-  <strong>1. {profile?.full_name || (user.phone ?? 'You')} (You)</strong>
-          </li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>2. Agent 0821234567 - R4,800.00</li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>3. Agent 0839876543 - R3,900.00</li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>4. Agent 0765554444 - R3,200.00</li>
-          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>5. Agent 0612345678 - R2,700.00</li>
-        </ol>
-        <p style={{ fontStyle: 'italic', color: '#555', marginTop: '10px' }}>Updates live with every sale!</p>
+        <h2 style={{ color: '#1B4D3E' }}>Your Downline ({downline.length} recruits)</h2>
+        {downline.length === 0 ? (
+          <p>No recruits yet. Share your referral code: {user.phone}</p>
+        ) : (
+          <ul style={{ paddingLeft: '20px' }}>
+            {downline.map((recruit) => (
+              <li key={recruit.id} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+                {recruit.full_name} from {recruit.area_code}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {user.role === 'admin' && (
@@ -277,32 +321,12 @@ function App() {
           </label>
           <br />
           <label>
-            Stock Allocation %:
+            Referral Override %:
             <input
               type="number"
-              value={stockRate}
-              onChange={(e) => setStockRate(Number(e.target.value) || 50)}
+              value={overrideRate}
+              onChange={(e) => setOverrideRate(Number(e.target.value) || 10)}
               style={{ padding: '10px', margin: '10px', width: '100px' }}
-            />
-          </label>
-          <br />
-          <label>
-            Bonus Pool %:
-            <input
-              type="number"
-              value={bonusRate}
-              onChange={(e) => setBonusRate(Number(e.target.value) || 20)}
-              style={{ padding: '10px', margin: '10px', width: '100px' }}
-            />
-          </label>
-          <br />
-          <label>
-            Weekly Bonus Pool Prize (ZAR):
-            <input
-              type="number"
-              value={bonusPoolAmount}
-              onChange={(e) => setBonusPoolAmount(Number(e.target.value) || 5000)}
-              style={{ padding: '10px', margin: '10px', width: '150px' }}
             />
           </label>
           <br />
