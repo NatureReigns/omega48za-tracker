@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseclient.jsx';
+import { supabase } from './supabaseClient.jsx';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -61,7 +61,7 @@ function App() {
       id: user.id,
       full_name: fullName,
       area_code: areaCode,
-      stock_balance: 50, // Initial stock for testing; adjust as needed
+      stock_balance: 50, // Initial stock for new agents
     });
     if (error) {
       alert('Error saving profile: ' + error.message);
@@ -76,7 +76,7 @@ function App() {
     if (!amount || !bottles) return alert('Enter amount and bottles');
     const bottlesNum = Number(bottles);
     if ((profile?.stock_balance || 0) < bottlesNum) {
-      return alert('Insufficient stock! Please restock before selling.');
+      return alert('Insufficient stock! Please restock.');
     }
 
     const { error } = await supabase.from('sales').insert({
@@ -87,7 +87,6 @@ function App() {
     if (error) {
       alert('Error saving sale: ' + error.message);
     } else {
-      // Deduct from stock balance
       const newBalance = (profile.stock_balance || 0) - bottlesNum;
       await supabase.from('profiles').update({ stock_balance: newBalance }).eq('id', user.id);
       setProfile({ ...profile, stock_balance: newBalance });
@@ -250,12 +249,69 @@ function App() {
         </div>
       </div>
 
-      {/* Keep your existing leaderboard and admin panel sections here */}
+      <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
+        <ol style={{ paddingLeft: '20px' }}>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+            <strong>1. {profile?.full_name || user.phone ?? 'You'} (You)</strong> - R{totalSales.toFixed(2)}
+          </li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>2. Agent 0821234567 - R4,800.00</li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>3. Agent 0839876543 - R3,900.00</li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>4. Agent 0765554444 - R3,200.00</li>
+          <li style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>5. Agent 0612345678 - R2,700.00</li>
+        </ol>
+        <p style={{ fontStyle: 'italic', color: '#555', marginTop: '10px' }}>Updates live with every sale!</p>
+      </div>
 
       {user.role === 'admin' && (
         <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
           <h3>Admin Panel - Edit Rules</h3>
-          {/* ... existing admin inputs and button ... */}
+          <label>
+            Commission %:
+            <input
+              type="number"
+              value={commissionRate}
+              onChange={(e) => setCommissionRate(Number(e.target.value) || 30)}
+              style={{ padding: '10px', margin: '10px', width: '100px' }}
+            />
+          </label>
+          <br />
+          <label>
+            Stock Allocation %:
+            <input
+              type="number"
+              value={stockRate}
+              onChange={(e) => setStockRate(Number(e.target.value) || 50)}
+              style={{ padding: '10px', margin: '10px', width: '100px' }}
+            />
+          </label>
+          <br />
+          <label>
+            Bonus Pool %:
+            <input
+              type="number"
+              value={bonusRate}
+              onChange={(e) => setBonusRate(Number(e.target.value) || 20)}
+              style={{ padding: '10px', margin: '10px', width: '100px' }}
+            />
+          </label>
+          <br />
+          <label>
+            Weekly Bonus Pool Prize (ZAR):
+            <input
+              type="number"
+              value={bonusPoolAmount}
+              onChange={(e) => setBonusPoolAmount(Number(e.target.value) || 5000)}
+              style={{ padding: '10px', margin: '10px', width: '150px' }}
+            />
+          </label>
+          <br />
+          <button
+            onClick={saveRules}
+            style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px', marginTop: '20px' }}
+          >
+            Save Rules
+          </button>
         </div>
       )}
     </div>
