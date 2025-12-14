@@ -228,6 +228,34 @@ function App() {
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
+        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+  <h2>Add Sale</h2>
+  {/* ... existing sales entry code ... */}
+  <div style={{ marginTop: '20px' }}>
+    {/* ... existing calculation paragraphs ... */}
+  </div>
+</div>
+
+{/* Insert the leaderboard here */}
+<div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+  <h2 style={{ color: '#1B4D3E' }}>Weekly Leaderboard (Top 10)</h2>
+  {leaderboard.length === 0 ? (
+    <p>No sales this week yet</p>
+  ) : (
+    <ol style={{ paddingLeft: '20px' }}>
+      {leaderboard.map((entry, index) => (
+        <li key={entry.agent_id} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+          <strong>{index + 1}. {entry.full_name || entry.phone} {entry.agent_id === user.id ? '(You)' : ''}</strong> - R{entry.weekly_sales.toFixed(2)}
+        </li>
+      ))}
+    </ol>
+  )}
+  <p style={{ fontStyle: 'italic', color: '#555', marginTop: '10px' }}>Updates live with every sale!</p>
+</div>
+
+{user.role === 'admin' && (
+  {/* ... existing admin panel ... */}
+)}
         <input placeholder="Amount (ZAR)" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
         <input placeholder="Bottles" value={bottles} onChange={(e) => setBottles(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
         <button onClick={addSale} style={{ padding: '10px 20px', background: '#D4AF37', border: 'none', borderRadius: '6px' }}>
