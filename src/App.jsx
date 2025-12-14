@@ -28,7 +28,7 @@ function App() {
     });
     const [depositPhoto, setDepositPhoto] = useState(null);
 const [uploadedPhotos, setUploadedPhotos] = useState([]);
-    });
+    
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -135,7 +135,45 @@ const [uploadedPhotos, setUploadedPhotos] = useState([]);
   if ((profile?.stock_balance || 0) < bottlesNum) {
     return alert('Insufficient stock! Please restock before selling.');
   }
+const uploadDepositPhoto = async () => {
+  if (!depositPhoto) return alert('Please select a photo');
+  const fileExt = depositPhoto.name.split('.').pop();
+  const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
+  const { error } = await supabase.storage
+    .from('deposit-photos')
+    .upload(fileName, depositPhoto);
+
+  if (error) {
+    alert('Error uploading photo: ' + error.message);
+  } else {
+    alert('Deposit photo uploaded successfully!');
+    setDepositPhoto(null);
+    loadUploadedPhotos();
+  }
+};
+
+const loadUploadedPhotos = async () => {
+  const { data, error } = await supabase.storage
+    .from('deposit-photos')
+    .list(`${user.id}/`);
+
+  if (error) {
+    console.error('Error loading photos:', error);
+  } else {
+    const urls = data.map(file => {
+      const { data: urlData } = supabase.storage
+        .from('deposit-photos')
+        .getPublicUrl(`${user.id}/${file.name}`);
+      return urlData.publicUrl;
+    });
+    setUploadedPhotos(urls);
+  }
+};
+
+useEffect(() => {
+  if (user) loadUploadedPhotos();
+}, [user]);
   const { error } = await supabase.from('sales').insert({
     agent_id: user.id,
     amount_zar: Number(amount),
