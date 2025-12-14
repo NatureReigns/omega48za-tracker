@@ -338,7 +338,6 @@ function App() {
 </p>
       <p><strong>Your Referral Code: {user.phone}</strong> (Share with recruits)</p>
 <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
-
 <p style={{ fontWeight: 'bold', color: (profile?.stock_balance || 0) < 10 ? 'red' : 'green' }}>
   Current Stock: {profile?.stock_balance || 0} bottles
   {(profile?.stock_balance || 0) < 10 ? ' (Low stock - restock needed)' : ''}
