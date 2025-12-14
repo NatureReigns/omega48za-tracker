@@ -23,6 +23,67 @@ function App() {
       setUser(session?.user ?? null);
       setLoading(false);
     });
+    const [leaderboard, setLeaderboard] = useState([]);
+
+useEffect(() => {
+  if (user) {
+    const loadLeaderboard = async () => {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const { data, error } = await supabase
+        .from('sales')
+        .select('agent_id, amount_zar')
+        .gte('created_at', oneWeekAgo.toISOString());
+
+      if (error) {
+        console.error('Error loading leaderboard:', error);
+        return;
+      }
+
+      // Aggregate by agent
+      const aggregated = data.reduce((acc, sale) => {
+        acc[sale.agent_id] = (acc[sale.agent_id] || 0) + sale.amount_zar;
+        return acc;
+      }, {});
+
+      // Get profiles for names
+      const agentIds = Object.keys(aggregated);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', agentIds);
+
+      const profileMap = profiles.reduce((map, p) => {
+        map[p.id] = p.full_name;
+        return map;
+      }, {});
+
+      // Sort and take top 10
+      const ranked = Object.entries(aggregated)
+        .map(([agent_id, weekly_sales]) => ({
+          agent_id,
+          full_name: profileMap[agent_id],
+          phone: agent_id, // fallback
+          weekly_sales,
+        }))
+        .sort((a, b) => b.weekly_sales - a.weekly_sales)
+        .slice(0, 10);
+
+      setLeaderboard(ranked);
+    };
+
+    loadLeaderboard();
+
+    // Real-time subscription
+    const subscription = supabase
+      .channel('sales-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, loadLeaderboard)
+      .subscribe();
+
+    return () => supabase.removeChannel(subscription);
+  }
+}, [user]);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
