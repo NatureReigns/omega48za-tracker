@@ -23,6 +23,7 @@ function App() {
   const [weeklyPayout, setWeeklyPayout] = useState(0);
   const [depositPhoto, setDepositPhoto] = useState(null);
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
