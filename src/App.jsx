@@ -39,7 +39,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load profile, rules, and referral rules when user is authenticated
+  // Load profile and rules when user is authenticated
   useEffect(() => {
     if (!user) return;
 
@@ -78,7 +78,7 @@ function App() {
     if (!user) return;
 
     const loadSalesAndDownline = async () => {
-      // Load personal sales
+      // Personal sales
       const { data: salesData } = await supabase
         .from('sales')
         .select('amount_zar, bottles_sold, created_at')
@@ -87,7 +87,7 @@ function App() {
 
       setSales(salesData || []);
 
-      // Load downline (agents who have this user as referrer)
+      // Downline
       const { data: downlineData } = await supabase
         .from('profiles')
         .select('id, full_name, area_code, phone')
@@ -95,7 +95,7 @@ function App() {
 
       setDownline(downlineData || []);
 
-      // Calculate override earnings from downline sales
+      // Override earnings from downline sales
       if (downlineData && downlineData.length > 0) {
         const downlineIds = downlineData.map(d => d.id);
         const { data: downlineSales } = await supabase
@@ -113,7 +113,7 @@ function App() {
     loadSalesAndDownline();
   }, [user, overrideRate]);
 
-  // Calculate weekly payout (personal sales only + override)
+  // Weekly payout calculation
   useEffect(() => {
     if (!user || sales.length === 0) {
       setWeeklyPayout(overrideEarnings);
@@ -131,7 +131,7 @@ function App() {
     setWeeklyPayout(personalPayout + overrideEarnings);
   }, [sales, commissionRate, bonusRate, overrideEarnings, user]);
 
-  // Load uploaded deposit photos
+  // Load deposit photos
   useEffect(() => {
     if (!user) return;
 
@@ -156,7 +156,7 @@ function App() {
     loadUploadedPhotos();
   }, [user]);
 
-  // Load notifications with real-time subscription
+  // Notifications with real-time
   useEffect(() => {
     if (!user) return;
 
@@ -192,12 +192,10 @@ function App() {
     };
   }, [user]);
 
-  // Demo sign-in functions
   const signInWithPhone = () => {
     setUser({ id: 'demo', phone: phoneInput || '0727088491', role: 'agent' });
   };
 
-  // Profile saving
   const saveProfile = async () => {
     if (!fullName || !areaCode) return alert('Please enter your name and area');
 
@@ -229,7 +227,6 @@ function App() {
     }
   };
 
-  // Sale recording
   const addSale = async () => {
     if (!amount || !bottles) return alert('Please enter amount and bottles');
 
@@ -245,10 +242,10 @@ function App() {
       setAmount('');
       setBottles('');
       alert('Sale recorded successfully!');
+      // Sales will refresh via the useEffect dependency on user/overrideRate
     }
   };
 
-  // Deposit photo upload
   const uploadDepositPhoto = async () => {
     if (!depositPhoto) return alert('Please select a photo');
 
@@ -265,7 +262,6 @@ function App() {
       alert('Deposit photo uploaded successfully!');
       setDepositPhoto(null);
 
-      // Refresh photo list
       const { data } = await supabase.storage
         .from('deposit-photos')
         .list(`${user.id}/`);
@@ -282,7 +278,6 @@ function App() {
     }
   };
 
-  // Admin: Save commission and override rules
   const saveRules = async () => {
     const { error: err1 } = await supabase.from('rules').upsert({
       id: 1,
@@ -304,7 +299,6 @@ function App() {
     }
   };
 
-  // Derived calculations for display
   const totalSales = sales.reduce((sum, s) => sum + s.amount_zar, 0);
   const commission = totalSales * (commissionRate / 100);
   const stockAlloc = totalSales * (stockRate / 100);
@@ -391,4 +385,133 @@ function App() {
       <h1 style={{ color: '#1B4D3E' }}>Welcome, {profile?.full_name || user.phone}</h1>
 
       <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
-        <h2 style={{ color: '#1B4D3
+        <h2 style={{ color: '#1B4D3E' }}>Notifications</h2>
+        {notifications.length === 0 ? (
+          <p>No notifications yet</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {notifications.map((note, index) => (
+              <li key={index} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+                {note.message}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
+      <p style={{ fontWeight: 'bold', fontSize: '18px' }}>
+        Weekly Payout: R{weeklyPayout.toFixed(2)} (Paid every Friday via PayShap)
+      </p>
+      <p><strong>Your Referral Code: {user.phone}</strong> (Share with new recruits)</p>
+
+      <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
+
+      <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <h2>Add Sale</h2>
+        <input placeholder="Amount (ZAR)" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
+        <input placeholder="Bottles Sold" value={bottles} onChange={(e) => setBottles(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
+        <button onClick={addSale} style={{ padding: '10px 20px', background: '#D4AF37', border: 'none', borderRadius: '6px', color: 'black' }}>
+          Add Sale
+        </button>
+
+        <div style={{ marginTop: '20px' }}>
+          <p><strong>Total Personal Sales:</strong> R{totalSales.toFixed(2)}</p>
+          <p><strong>Commission ({commissionRate}%):</strong> R{commission.toFixed(2)}</p>
+          <p><strong>Stock Allocation ({stockRate}%):</strong> R{stockAlloc.toFixed(2)}</p>
+          <p><strong>Bonus Allocation ({bonusRate}%):</strong> R{bonusAlloc.toFixed(2)}</p>
+          <p><strong>Referral Override Earnings ({overrideRate}% on downline):</strong> R{overrideEarnings.toFixed(2)}</p>
+        </div>
+      </div>
+
+      <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ color: '#1B4D3E' }}>Deposit Proof Upload</h2>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setDepositPhoto(e.target.files[0])}
+          style={{ marginBottom: '10px' }}
+        />
+        <button onClick={uploadDepositPhoto} style={{ padding: '10px 20px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px' }}>
+          Upload Photo
+        </button>
+
+        {uploadedPhotos.length > 0 && (
+          <div style={{ marginTop: '20px' }}>
+            <h3>Your Uploaded Deposits</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {uploadedPhotos.map((url, index) => (
+                <img key={index} src={url} alt={`Deposit proof ${index + 1}`} style={{ maxWidth: '200px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ color: '#1B4D3E' }}>Your Downline ({downline.length} recruits)</h2>
+        {downline.length === 0 ? (
+          <p>No recruits yet. Share your referral code: <strong>{user.phone}</strong></p>
+        ) : (
+          <ul style={{ paddingLeft: '20px' }}>
+            {downline.map((recruit) => (
+              <li key={recruit.id} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+                <strong>{recruit.full_name}</strong> from {recruit.area_code} ({recruit.phone})
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {user.role === 'admin' && (
+        <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
+          <h3>Admin Panel - Commission Rules</h3>
+          <label style={{ display: 'block', margin: '10px 0' }}>
+            Commission Rate (%):
+            <input
+              type="number"
+              value={commissionRate}
+              onChange={(e) => setCommissionRate(Number(e.target.value) || 30)}
+              style={{ padding: '10px', marginLeft: '10px', width: '100px' }}
+            />
+          </label>
+          <label style={{ display: 'block', margin: '10px 0' }}>
+            Stock Allocation Rate (%):
+            <input
+              type="number"
+              value={stockRate}
+              onChange={(e) => setStockRate(Number(e.target.value) || 50)}
+              style={{ padding: '10px', marginLeft: '10px', width: '100px' }}
+            />
+          </label>
+          <label style={{ display: 'block', margin: '10px 0' }}>
+            Bonus Rate (%):
+            <input
+              type="number"
+              value={bonusRate}
+              onChange={(e) => setBonusRate(Number(e.target.value) || 20)}
+              style={{ padding: '10px', marginLeft: '10px', width: '100px' }}
+            />
+          </label>
+          <label style={{ display: 'block', margin: '10px 0' }}>
+            Referral Override Rate (%):
+            <input
+              type="number"
+              value={overrideRate}
+              onChange={(e) => setOverrideRate(Number(e.target.value) || 10)}
+              style={{ padding: '10px', marginLeft: '10px', width: '100px' }}
+            />
+          </label>
+          <button
+            onClick={saveRules}
+            style={{ padding: '12px 24px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '6px', marginTop: '20px' }}
+          >
+            Save All Rules
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
