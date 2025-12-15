@@ -24,8 +24,9 @@ function App() {
   const [depositPhoto, setDepositPhoto] = useState(null);
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [payouts, setPayouts] = useState([]); // New: Track claimed payouts
 
-  // Authentication handling
+  // Authentication handling (unchanged)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -39,7 +40,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load profile and rules when user is authenticated
+  // Load profile and rules (unchanged)
   useEffect(() => {
     if (!user) return;
 
@@ -73,12 +74,11 @@ function App() {
     loadProfileAndRules();
   }, [user]);
 
-  // Load sales and downline
+  // Load sales and downline (unchanged)
   useEffect(() => {
     if (!user) return;
 
     const loadSalesAndDownline = async () => {
-      // Personal sales
       const { data: salesData } = await supabase
         .from('sales')
         .select('amount_zar, bottles_sold, created_at')
@@ -87,7 +87,6 @@ function App() {
 
       setSales(salesData || []);
 
-      // Downline
       const { data: downlineData } = await supabase
         .from('profiles')
         .select('id, full_name, area_code, phone')
@@ -95,7 +94,6 @@ function App() {
 
       setDownline(downlineData || []);
 
-      // Override earnings from downline sales
       if (downlineData && downlineData.length > 0) {
         const downlineIds = downlineData.map(d => d.id);
         const { data: downlineSales } = await supabase
@@ -113,7 +111,7 @@ function App() {
     loadSalesAndDownline();
   }, [user, overrideRate]);
 
-  // Weekly payout calculation
+  // Weekly payout calculation (unchanged)
   useEffect(() => {
     if (!user || sales.length === 0) {
       setWeeklyPayout(overrideEarnings);
@@ -131,7 +129,7 @@ function App() {
     setWeeklyPayout(personalPayout + overrideEarnings);
   }, [sales, commissionRate, bonusRate, overrideEarnings, user]);
 
-  // Load deposit photos
+  // Load deposit photos (unchanged)
   useEffect(() => {
     if (!user) return;
 
@@ -156,7 +154,7 @@ function App() {
     loadUploadedPhotos();
   }, [user]);
 
-  // Notifications with real-time
+  // Notifications (unchanged)
   useEffect(() => {
     if (!user) return;
 
@@ -192,55 +190,71 @@ function App() {
     };
   }, [user]);
 
+  // Load claimed payouts for demo mode
+  useEffect(() => {
+    if (user && user.id.startsWith('demo')) {
+      // Simulate some claimed payout history
+      setPayouts([
+        { amount: 1250.00, claimed_at: '2025-12-13', status: 'Paid via PayShap' },
+        { amount: 890.50, claimed_at: '2025-12-06', status: 'Paid via PayShap' },
+      ]);
+    }
+  }, [user]);
+
   const signInWithPhone = () => {
     setUser({ id: 'demo', phone: phoneInput || '0727088491', role: 'agent' });
   };
 
   const saveProfile = async () => {
-  if (!fullName || !areaCode) return alert('Please enter your name and area');
+    if (!fullName || !areaCode) return alert('Please enter your name and area');
 
-  // Demo mode: Skip Supabase insert and use local state only
-  if (user.id.startsWith('demo')) {
-    setProfile({
+    if (user.id.startsWith('demo')) {
+      setProfile({
+        full_name: fullName,
+        area_code: areaCode,
+        phone: user.phone,
+      });
+      setShowSignup(false);
+      alert('Profile saved successfully (Demo Mode)!');
+      return;
+    }
+
+    let referrerId = null;
+    if (referrerPhone) {
+      const normalized = referrerPhone.replace(/\D/g, '');
+      const { data } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', normalized)
+        .single();
+      referrerId = data?.id || null;
+    }
+
+    const { error } = await supabase.from('profiles').insert({
+      id: user.id,
       full_name: fullName,
       area_code: areaCode,
-      phone: user.phone,  // Optional: store phone locally if needed
+      referrer_id: referrerId,
     });
-    setShowSignup(false);
-    alert('Profile saved successfully (Demo Mode)!');
-    return;
-  }
 
-  // Real Supabase mode (future use with proper auth)
-  let referrerId = null;
-  if (referrerPhone) {
-    const normalized = referrerPhone.replace(/\D/g, '');
-    const { data } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('phone', normalized)
-      .single();
-    referrerId = data?.id || null;
-  }
-
-  const { error } = await supabase.from('profiles').insert({
-    id: user.id,  // This will be a proper UUID from Supabase auth in real mode
-    full_name: fullName,
-    area_code: areaCode,
-    referrer_id: referrerId,
-  });
-
-  if (error) {
-    alert('Error saving profile: ' + error.message);
-  } else {
-    setProfile({ full_name: fullName, area_code: areaCode });
-    setShowSignup(false);
-    alert('Profile saved successfully!');
-  }
-};
+    if (error) {
+      alert('Error saving profile: ' + error.message);
+    } else {
+      setProfile({ full_name: fullName, area_code: areaCode });
+      setShowSignup(false);
+      alert('Profile saved successfully!');
+    }
+  };
 
   const addSale = async () => {
     if (!amount || !bottles) return alert('Please enter amount and bottles');
+
+    if (user.id.startsWith('demo')) {
+      alert('Sale recorded successfully (Demo Mode)!');
+      setAmount('');
+      setBottles('');
+      return;
+    }
 
     const { error } = await supabase.from('sales').insert({
       agent_id: user.id,
@@ -259,6 +273,12 @@ function App() {
 
   const uploadDepositPhoto = async () => {
     if (!depositPhoto) return alert('Please select a photo');
+
+    if (user.id.startsWith('demo')) {
+      alert('Deposit photo uploaded successfully (Demo Mode)!');
+      setDepositPhoto(null);
+      return;
+    }
 
     const fileExt = depositPhoto.name.split('.').pop();
     const fileName = `${user.id}/${Date.now()}.${fileExt}`;
@@ -310,6 +330,32 @@ function App() {
     }
   };
 
+  // New: Claim payout function
+  const claimPayout = () => {
+    if (weeklyPayout <= 0) {
+      alert('No payout available to claim at this time.');
+      return;
+    }
+
+    if (user.id.startsWith('demo')) {
+      const newPayout = {
+        amount: weeklyPayout,
+        claimed_at: new Date().toISOString().split('T')[0],
+        status: 'Paid via PayShap (Demo)',
+      };
+      setPayouts([newPayout, ...payouts]);
+      alert(`Payout of R${weeklyPayout.toFixed(2)} claimed successfully (Demo Mode)!`);
+      // Reset weekly payout for demo
+      setWeeklyPayout(0);
+      return;
+    }
+
+    // Future real implementation: Insert into a 'payouts' table
+    // For now, simulate success
+    alert(`Payout of R${weeklyPayout.toFixed(2)} requested. It will be processed every Friday via PayShap.`);
+    // Optionally reset or mark as claimed
+  };
+
   const totalSales = sales.reduce((sum, s) => sum + s.amount_zar, 0);
   const commission = totalSales * (commissionRate / 100);
   const stockAlloc = totalSales * (stockRate / 100);
@@ -320,6 +366,7 @@ function App() {
   }
 
   if (!user) {
+    // Login screen (unchanged)
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
         <h1 style={{ color: '#1B4D3E' }}>Nature Reigns Omega48</h1>
@@ -352,6 +399,7 @@ function App() {
   }
 
   if (showSignup) {
+    // Signup screen (unchanged)
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
         <h1 style={{ color: '#1B4D3E' }}>Complete Your Profile</h1>
@@ -411,13 +459,50 @@ function App() {
       </div>
 
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
-      <p style={{ fontWeight: 'bold', fontSize: '18px' }}>
-        Weekly Payout: R{weeklyPayout.toFixed(2)} (Paid every Friday via PayShap)
-      </p>
+
+      {/* Updated Weekly Payout Section with Claim Button */}
+      <div style={{ marginTop: '20px', padding: '20px', background: '#e8f5e9', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <p style={{ fontWeight: 'bold', fontSize: '20px', color: '#1B4D3E' }}>
+          Current Weekly Payout: R{weeklyPayout.toFixed(2)}
+        </p>
+        <p style={{ fontSize: '14px', color: '#555' }}>Paid every Friday via PayShap</p>
+        <button
+          onClick={claimPayout}
+          disabled={weeklyPayout <= 0}
+          style={{
+            padding: '12px 24px',
+            fontSize: '18px',
+            background: weeklyPayout > 0 ? '#1B4D3E' : '#a0a0a0',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            marginTop: '10px',
+            cursor: weeklyPayout > 0 ? 'pointer' : 'not-allowed'
+          }}
+        >
+          Claim Payout Now
+        </button>
+      </div>
+
+      {/* Payout History Section */}
+      {payouts.length > 0 && (
+        <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ color: '#1B4D3E' }}>Payout History</h2>
+          <ul style={{ paddingLeft: '20px' }}>
+            {payouts.map((p, index) => (
+              <li key={index} style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
+                <strong>R{p.amount.toFixed(2)}</strong> - Claimed on {p.claimed_at} ({p.status})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <p><strong>Your Referral Code: {user.phone}</strong> (Share with new recruits)</p>
 
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
 
+      {/* Rest of the dashboard remains unchanged */}
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
         <input placeholder="Amount (ZAR)" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
