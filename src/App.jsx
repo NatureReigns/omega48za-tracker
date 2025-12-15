@@ -92,6 +92,30 @@ function App() {
         const { data, error } = await supabase.storage
           .from('deposit-photos')
           .list(`${user.id}/`);
+        useEffect(() => {
+  if (user) {
+    const loadNotifications = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('message, created_at')
+        .eq('agent_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      setNotifications(data || []);
+    };
+
+    loadNotifications();
+
+    // Real-time subscription
+    const subscription = supabase
+      .channel('notifications-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `agent_id=eq.${user.id}` }, loadNotifications)
+      .subscribe();
+
+    return () => supabase.removeChannel(subscription);
+  }
+}, [user]);
 
         if (error) {
           console.error('Error loading photos:', error);
@@ -333,6 +357,20 @@ function App() {
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
+      <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
+  <h2 style={{ color: '#1B4D3E' }}>Notifications</h2>
+  {notifications.length === 0 ? (
+    <p>No notifications yet</p>
+  ) : (
+    <ul style={{ listStyle: 'none', padding: 0 }}>
+      {notifications.map((note, index) => (
+        <li key={index} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+          {note.message}
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
       <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
   <h2 style={{ color: '#1B4D3E' }}>Notifications</h2>
   {notifications.length === 0 ? (
