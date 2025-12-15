@@ -197,35 +197,25 @@ function App() {
   };
 
   const saveProfile = async () => {
-  if (!fullName || !areaCode) return alert('Please enter your name and area');
+    if (!fullName || !areaCode) return alert('Please enter your name and area');
 
-  let referrerId = null;
-  if (referrerPhone) {
-    const normalized = referrerPhone.replace(/\D/g, '');
-    const { data } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('phone', normalized)
-      .single();
-    referrerId = data?.id || null;
-  }
+    let referrerId = null;
+    if (referrerPhone) {
+      const normalized = referrerPhone.replace(/\D/g, '');
+      const { data } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', normalized)
+        .single();
+      referrerId = data?.id || null;
+    }
 
-  const { error } = await supabase.from('profiles').insert({
-    id: user.id,
-    full_name: fullName,
-    area_code: areaCode,
-    referrer_id: referrerId,
-    // Removed 'phone: user.phone' to avoid the column error
-  });
-
-  if (error) {
-    alert('Error saving profile: ' + error.message);
-  } else {
-    setProfile({ full_name: fullName, area_code: areaCode });
-    setShowSignup(false);
-    alert('Profile saved successfully!');
-  }
-};
+    const { error } = await supabase.from('profiles').insert({
+      id: user.id,
+      full_name: fullName,
+      area_code: areaCode,
+      referrer_id: referrerId,
+    });
 
     if (error) {
       alert('Error saving profile: ' + error.message);
@@ -251,7 +241,6 @@ function App() {
       setAmount('');
       setBottles('');
       alert('Sale recorded successfully!');
-      // Sales will refresh via the useEffect dependency on user/overrideRate
     }
   };
 
@@ -521,5 +510,6 @@ function App() {
       )}
     </div>
   );
+}
 
 export default App;
