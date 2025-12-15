@@ -337,6 +337,20 @@ function App() {
         Weekly Payout: R{weeklyPayout.toFixed(2)} (Paid every Friday via PayShap)
       </p>
       <p><strong>Your Referral Code: {user.phone}</strong> (Share with recruits)</p>
+      <button
+  onClick={() => alert('Payout request submitted. Your R' + weeklyPayout.toFixed(2) + ' will be processed via PayShap on Friday.')}
+  style={{
+    padding: '12px 24px',
+    fontSize: '16px',
+    background: '#1B4D3E',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    marginTop: '10px',
+  }}
+>
+  Claim Payout
+</button>
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
