@@ -342,6 +342,16 @@ useEffect(() => {
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
+      <div style={{ marginTop: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '8px' }}>
+  <h3>Notifications</h3>
+  <ul style={{ listStyle: 'none', padding: 0 }}>
+    {notifications.map((note, index) => (
+      <li key={index} style={{ padding: '5px 0' }}>
+        {note}
+      </li>
+    ))}
+  </ul>
+</div>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
       <p style={{ fontWeight: 'bold', fontSize: '18px' }}>
         Weekly Payout: R{weeklyPayout.toFixed(2)} (Paid every Friday via PayShap)
