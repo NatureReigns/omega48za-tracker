@@ -371,20 +371,6 @@ function App() {
     </ul>
   )}
 </div>
-      <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
-  <h2 style={{ color: '#1B4D3E' }}>Notifications</h2>
-  {notifications.length === 0 ? (
-    <p>No notifications yet</p>
-  ) : (
-    <ul style={{ listStyle: 'none', padding: 0 }}>
-      {notifications.map((note, index) => (
-        <li key={index} style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
-          {note.message}
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
       <p style={{ fontWeight: 'bold', fontSize: '18px' }}>
         Weekly Payout: R{weeklyPayout.toFixed(2)} (Paid every Friday via PayShap)
