@@ -188,6 +188,15 @@ function App() {
       bonus_rate: Number(bonusRate),
       bonus_pool_amount: Number(bonusPoolAmount),
     });
+    const loadNotifications = async () => {
+  // Placeholder for notifications - enhance with real events
+  setNotifications([ 'Welcome to Omega48ZA!' ]);
+};
+
+useEffect(() => {
+  if (user) loadNotifications();
+}, [user]);
+    
     const { error: err2 } = await supabase.from('referral_rules').upsert({
       id: 1,
       override_rate: Number(overrideRate),
