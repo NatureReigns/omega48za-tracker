@@ -57,7 +57,7 @@ function App() {
         }
       });
 
-      supabase.from('referral_rules').select('*').single().then(({ data }) => {
+      supabase.from('referral_rules').select('*').single().then(({ data } ) => {
         if (data) {
           setOverrideRate(data.override_rate || 10);
         }
@@ -188,15 +188,6 @@ function App() {
       bonus_rate: Number(bonusRate),
       bonus_pool_amount: Number(bonusPoolAmount),
     });
-    const loadNotifications = async () => {
-  // Placeholder for notifications - enhance with real events
-  setNotifications([ 'Welcome to Omega48ZA!' ]);
-};
-
-useEffect(() => {
-  if (user) loadNotifications();
-}, [user]);
-    
     const { error: err2 } = await supabase.from('referral_rules').upsert({
       id: 1,
       override_rate: Number(overrideRate),
@@ -342,35 +333,11 @@ useEffect(() => {
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ color: '#1B4D3E' }}>Welcome {profile?.full_name || (user.phone ?? 'Seller')}</h1>
-      <div style={{ marginTop: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '8px' }}>
-  <h3>Notifications</h3>
-  <ul style={{ listStyle: 'none', padding: 0 }}>
-    {notifications.map((note, index) => (
-      <li key={index} style={{ padding: '5px 0' }}>
-        {note}
-      </li>
-    ))}
-  </ul>
-</div>
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
       <p style={{ fontWeight: 'bold', fontSize: '18px' }}>
         Weekly Payout: R{weeklyPayout.toFixed(2)} (Paid every Friday via PayShap)
       </p>
       <p><strong>Your Referral Code: {user.phone}</strong> (Share with recruits)</p>
-      <button
-  onClick={() => alert('Payout request submitted. Your R' + weeklyPayout.toFixed(2) + ' will be processed via PayShap on Friday.')}
-  style={{
-    padding: '12px 24px',
-    fontSize: '16px',
-    background: '#1B4D3E',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    marginTop: '10px',
-  }}
->
-  Claim Payout
-</button>
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
