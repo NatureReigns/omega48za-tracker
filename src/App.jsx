@@ -197,34 +197,47 @@ function App() {
   };
 
   const saveProfile = async () => {
-    if (!fullName || !areaCode) return alert('Please enter your name and area');
+  if (!fullName || !areaCode) return alert('Please enter your name and area');
 
-    let referrerId = null;
-    if (referrerPhone) {
-      const normalized = referrerPhone.replace(/\D/g, '');
-      const { data } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('phone', normalized)
-        .single();
-      referrerId = data?.id || null;
-    }
-
-    const { error } = await supabase.from('profiles').insert({
-      id: user.id,
+  // Demo mode: Skip Supabase insert and use local state only
+  if (user.id.startsWith('demo')) {
+    setProfile({
       full_name: fullName,
       area_code: areaCode,
-      referrer_id: referrerId,
+      phone: user.phone,  // Optional: store phone locally if needed
     });
+    setShowSignup(false);
+    alert('Profile saved successfully (Demo Mode)!');
+    return;
+  }
 
-    if (error) {
-      alert('Error saving profile: ' + error.message);
-    } else {
-      setProfile({ full_name: fullName, area_code: areaCode });
-      setShowSignup(false);
-      alert('Profile saved successfully!');
-    }
-  };
+  // Real Supabase mode (future use with proper auth)
+  let referrerId = null;
+  if (referrerPhone) {
+    const normalized = referrerPhone.replace(/\D/g, '');
+    const { data } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('phone', normalized)
+      .single();
+    referrerId = data?.id || null;
+  }
+
+  const { error } = await supabase.from('profiles').insert({
+    id: user.id,  // This will be a proper UUID from Supabase auth in real mode
+    full_name: fullName,
+    area_code: areaCode,
+    referrer_id: referrerId,
+  });
+
+  if (error) {
+    alert('Error saving profile: ' + error.message);
+  } else {
+    setProfile({ full_name: fullName, area_code: areaCode });
+    setShowSignup(false);
+    alert('Profile saved successfully!');
+  }
+};
 
   const addSale = async () => {
     if (!amount || !bottles) return alert('Please enter amount and bottles');
