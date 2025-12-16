@@ -5,7 +5,9 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
-  const [phoneInput, setPhoneInput] = useState('');
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [showOtpInput, setShowOtpInput] = useState(false);
   const [fullName, setFullName] = useState('');
   const [areaCode, setAreaCode] = useState('');
   const [referrerPhone, setReferrerPhone] = useState('');
@@ -24,9 +26,9 @@ function App() {
   const [depositPhoto, setDepositPhoto] = useState(null);
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [payouts, setPayouts] = useState([]); // New: Track claimed payouts
+  const [payouts, setPayouts] = useState([]);
 
-  // Authentication handling (unchanged)
+  // Authentication handling with real Supabase
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -40,7 +42,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load profile and rules (unchanged)
+  // Load profile, rules, and check for signup
   useEffect(() => {
     if (!user) return;
 
@@ -74,7 +76,7 @@ function App() {
     loadProfileAndRules();
   }, [user]);
 
-  // Load sales and downline (unchanged)
+  // Load sales and downline
   useEffect(() => {
     if (!user) return;
 
@@ -111,7 +113,7 @@ function App() {
     loadSalesAndDownline();
   }, [user, overrideRate]);
 
-  // Weekly payout calculation (unchanged)
+  // Weekly payout calculation
   useEffect(() => {
     if (!user || sales.length === 0) {
       setWeeklyPayout(overrideEarnings);
@@ -129,7 +131,7 @@ function App() {
     setWeeklyPayout(personalPayout + overrideEarnings);
   }, [sales, commissionRate, bonusRate, overrideEarnings, user]);
 
-  // Load deposit photos (unchanged)
+  // Load deposit photos
   useEffect(() => {
     if (!user) return;
 
@@ -154,7 +156,7 @@ function App() {
     loadUploadedPhotos();
   }, [user]);
 
-  // Notifications (unchanged)
+  // Load notifications with real-time
   useEffect(() => {
     if (!user) return;
 
@@ -190,34 +192,53 @@ function App() {
     };
   }, [user]);
 
-  // Load claimed payouts for demo mode
+  // Load payout history
   useEffect(() => {
-    if (user && user.id.startsWith('demo')) {
-      // Simulate some claimed payout history
-      setPayouts([
-        { amount: 1250.00, claimed_at: '2025-12-13', status: 'Paid via PayShap' },
-        { amount: 890.50, claimed_at: '2025-12-06', status: 'Paid via PayShap' },
-      ]);
-    }
+    if (!user) return;
+
+    const loadPayouts = async () => {
+      const { data } = await supabase
+        .from('payouts')
+        .select('*')
+        .eq('agent_id', user.id)
+        .order('claimed_at', { ascending: false });
+
+      setPayouts(data || []);
+    };
+
+    loadPayouts();
   }, [user]);
 
-  const signInWithPhone = () => {
-    setUser({ id: 'demo', phone: phoneInput || '0727088491', role: 'agent' });
+  // Claim payout
+  const claimPayout = async () => {
+    if (weeklyPayout <= 0) {
+      alert('No payout available to claim.');
+      return;
+    }
+
+    const { error } = await supabase.from('payouts').insert({
+      agent_id: user.id,
+      amount_zar: weeklyPayout,
+      status: 'Pending',
+    });
+
+    if (error) {
+      alert('Error claiming payout: ' + error.message);
+    } else {
+      alert('Payout claim submitted successfully! It will be processed every Friday via PayShap.');
+      setWeeklyPayout(0); // Reset current payout after claim
+      // Reload payouts
+      const { data } = await supabase
+        .from('payouts')
+        .select('*')
+        .eq('agent_id', user.id)
+        .order('claimed_at', { ascending: false });
+      setPayouts(data || []);
+    }
   };
 
   const saveProfile = async () => {
     if (!fullName || !areaCode) return alert('Please enter your name and area');
-
-    if (user.id.startsWith('demo')) {
-      setProfile({
-        full_name: fullName,
-        area_code: areaCode,
-        phone: user.phone,
-      });
-      setShowSignup(false);
-      alert('Profile saved successfully (Demo Mode)!');
-      return;
-    }
 
     let referrerId = null;
     if (referrerPhone) {
@@ -235,6 +256,7 @@ function App() {
       full_name: fullName,
       area_code: areaCode,
       referrer_id: referrerId,
+      phone: user.phone || '', // Optional if you add phone column later
     });
 
     if (error) {
@@ -248,13 +270,6 @@ function App() {
 
   const addSale = async () => {
     if (!amount || !bottles) return alert('Please enter amount and bottles');
-
-    if (user.id.startsWith('demo')) {
-      alert('Sale recorded successfully (Demo Mode)!');
-      setAmount('');
-      setBottles('');
-      return;
-    }
 
     const { error } = await supabase.from('sales').insert({
       agent_id: user.id,
@@ -273,12 +288,6 @@ function App() {
 
   const uploadDepositPhoto = async () => {
     if (!depositPhoto) return alert('Please select a photo');
-
-    if (user.id.startsWith('demo')) {
-      alert('Deposit photo uploaded successfully (Demo Mode)!');
-      setDepositPhoto(null);
-      return;
-    }
 
     const fileExt = depositPhoto.name.split('.').pop();
     const fileName = `${user.id}/${Date.now()}.${fileExt}`;
@@ -330,33 +339,7 @@ function App() {
     }
   };
 
-  // New: Claim payout function
-  const claimPayout = () => {
-    if (weeklyPayout <= 0) {
-      alert('No payout available to claim at this time.');
-      return;
-    }
-
-    if (user.id.startsWith('demo')) {
-      const newPayout = {
-        amount: weeklyPayout,
-        claimed_at: new Date().toISOString().split('T')[0],
-        status: 'Paid via PayShap (Demo)',
-      };
-      setPayouts([newPayout, ...payouts]);
-      alert(`Payout of R${weeklyPayout.toFixed(2)} claimed successfully (Demo Mode)!`);
-      // Reset weekly payout for demo
-      setWeeklyPayout(0);
-      return;
-    }
-
-    // Future real implementation: Insert into a 'payouts' table
-    // For now, simulate success
-    alert(`Payout of R${weeklyPayout.toFixed(2)} requested. It will be processed every Friday via PayShap.`);
-    // Optionally reset or mark as claimed
-  };
-
-  const totalSales = sales.reduce((sum, s) => sum + s.amount_zar, 0);
+  const totalSales = sales.reduce((sum, s) => sum + (s.amount_zar || 0), 0);
   const commission = totalSales * (commissionRate / 100);
   const stockAlloc = totalSales * (stockRate / 100);
   const bonusAlloc = totalSales * (bonusRate / 100);
@@ -366,40 +349,69 @@ function App() {
   }
 
   if (!user) {
-    // Login screen (unchanged)
+    if (showOtpInput) {
+      return (
+        <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
+          <h1 style={{ color: '#1B4D3E' }}>Enter OTP</h1>
+          <p>An OTP has been sent to {email}</p>
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="123456"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            style={{ padding: '14px', fontSize: '18px', width: '240px', borderRadius: '8px', border: '2px solid #D4AF37', marginBottom: '20px' }}
+          />
+          <br />
+          <button
+            onClick={async () => {
+              const { error } = await supabase.auth.verifyOtp({
+                email,
+                token: otp,
+                type: 'magiclink',
+              });
+              if (error) alert('Invalid OTP: ' + error.message);
+            }}
+            style={{ padding: '14px 32px', fontSize: '18px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '8px' }}
+          >
+            Verify OTP
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
         <h1 style={{ color: '#1B4D3E' }}>Nature Reigns Omega48</h1>
         <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
-        <p style={{ color: '#555' }}>Enter your SA number</p>
+        <p style={{ color: '#555' }}>Enter your email</p>
         <input
-          type="text"
-          inputMode="numeric"
-          placeholder="082 123 4567"
-          value={phoneInput}
-          onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ''))}
+          type="email"
+          placeholder="your@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           style={{ padding: '14px', fontSize: '18px', width: '240px', borderRadius: '8px', border: '2px solid #D4AF37', marginBottom: '20px' }}
         />
         <br />
         <button
-          onClick={signInWithPhone}
+          onClick={async () => {
+            const { error } = await supabase.auth.signInWithOtp({ email });
+            if (error) {
+              alert('Error sending OTP: ' + error.message);
+            } else {
+              setShowOtpInput(true);
+              alert('Magic link / OTP sent to your email!');
+            }
+          }}
           style={{ padding: '14px 32px', fontSize: '18px', background: '#1B4D3E', color: 'white', border: 'none', borderRadius: '8px', marginBottom: '20px' }}
         >
-          Continue (Demo Mode)
-        </button>
-        <br /><br />
-        <button
-          onClick={() => setUser({ id: 'demo-admin', phone: '0727088491', role: 'admin' })}
-          style={{ padding: '12px 24px', fontSize: '16px', background: '#D4AF37', color: 'black', border: 'none', borderRadius: '8px' }}
-        >
-          Demo Login (Admin)
+          Send Magic Link / OTP
         </button>
       </div>
     );
   }
 
   if (showSignup) {
-    // Signup screen (unchanged)
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
         <h1 style={{ color: '#1B4D3E' }}>Complete Your Profile</h1>
@@ -441,7 +453,7 @@ function App() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ color: '#1B4D3E' }}>Welcome, {profile?.full_name || user.phone}</h1>
+      <h1 style={{ color: '#1B4D3E' }}>Welcome, {profile?.full_name || user.email || 'Seller'}</h1>
 
       <div style={{ marginTop: '30px', padding: '20px', background: '#f0f0f0', borderRadius: '12px' }}>
         <h2 style={{ color: '#1B4D3E' }}>Notifications</h2>
@@ -460,7 +472,6 @@ function App() {
 
       {profile && <p style={{ color: '#555' }}>From {profile.area_code}</p>}
 
-      {/* Updated Weekly Payout Section with Claim Button */}
       <div style={{ marginTop: '20px', padding: '20px', background: '#e8f5e9', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <p style={{ fontWeight: 'bold', fontSize: '20px', color: '#1B4D3E' }}>
           Current Weekly Payout: R{weeklyPayout.toFixed(2)}
@@ -484,25 +495,23 @@ function App() {
         </button>
       </div>
 
-      {/* Payout History Section */}
       {payouts.length > 0 && (
         <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
           <h2 style={{ color: '#1B4D3E' }}>Payout History</h2>
           <ul style={{ paddingLeft: '20px' }}>
             {payouts.map((p, index) => (
               <li key={index} style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
-                <strong>R{p.amount.toFixed(2)}</strong> - Claimed on {p.claimed_at} ({p.status})
+                <strong>R{p.amount_zar.toFixed(2)}</strong> - Claimed on {new Date(p.claimed_at).toLocaleDateString()} ({p.status})
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      <p><strong>Your Referral Code: {user.phone}</strong> (Share with new recruits)</p>
+      <p><strong>Your Referral Code: {user.phone || user.email}</strong> (Share with new recruits)</p>
 
       <img src="https://raw.githubusercontent.com/NatureReigns/omega48za-tracker/main/public/logo.png" alt="Nature Reigns Logo" style={{ maxWidth: '300px', margin: '20px auto', display: 'block' }} />
 
-      {/* Rest of the dashboard remains unchanged */}
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2>Add Sale</h2>
         <input placeholder="Amount (ZAR)" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ padding: '10px', margin: '5px' }} />
@@ -547,7 +556,7 @@ function App() {
       <div style={{ marginTop: '30px', padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <h2 style={{ color: '#1B4D3E' }}>Your Downline ({downline.length} recruits)</h2>
         {downline.length === 0 ? (
-          <p>No recruits yet. Share your referral code: <strong>{user.phone}</strong></p>
+          <p>No recruits yet. Share your referral code: <strong>{user.phone || user.email}</strong></p>
         ) : (
           <ul style={{ paddingLeft: '20px' }}>
             {downline.map((recruit) => (
